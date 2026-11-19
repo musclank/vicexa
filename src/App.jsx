@@ -24,7 +24,7 @@ function App() {
   const [account, setAccount] = useState('')
   const [walletBusy, setWalletBusy] = useState(false)
   const [walletError, setWalletError] = useState('')
-  const [drafts, setDrafts] = useState([])
+  const [drafts, setDrafts] = useState(() => { try { return JSON.parse(localStorage.getItem('vicexa-project-drafts') || '[]') } catch { return [] } })
   const [form, setForm] = useState({ name: '', ticker: '', description: '', website: '' })
   const [notice, setNotice] = useState('')
 
@@ -34,6 +34,10 @@ function App() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
     return () => listener.subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem('vicexa-project-drafts', JSON.stringify(drafts))
+  }, [drafts])
 
   useEffect(() => {
     if (!window.ethereum) return

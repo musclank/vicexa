@@ -1,5 +1,8 @@
 import { ArrowUpRight, Cpu, Wallet, Layers3, Zap, ShieldCheck, Menu } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Auth from './components/Auth'
+import Dashboard from './components/Dashboard'
+import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const products = [
   { icon: Cpu, number: '01', title: 'AI TOOLKIT', text: 'A growing collection of intelligent tools built to turn ideas into action.' },
@@ -9,7 +12,29 @@ const products = [
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [view, setView] = useState('home')
+  const [session, setSession] = useState(null)
   const closeMenu = () => setMenuOpen(false)
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (session) setView('dashboard')
+  }, [session])
+
+  async function signOut() {
+    if (supabase) await supabase.auth.signOut()
+    setSession(null)
+    setView('home')
+  }
+
+  if (view === 'auth' && !session) return <Auth onBack={() => setView('home')} onAuthenticated={setSession} />
+  if (view === 'dashboard' && session) return <Dashboard session={session} onSignOut={signOut} />
 
   return (
     <main>
@@ -21,7 +46,7 @@ function App() {
           <a href="#ecosystem" onClick={closeMenu}>Ecosystem</a>
           <a href="#vision" onClick={closeMenu}>Vision</a>
           <a href="#roadmap" onClick={closeMenu}>Roadmap</a>
-          <a className="nav-cta" href="mailto:hello@vicexa.com">Get in touch <ArrowUpRight size={15}/></a>
+          <button className="nav-cta" onClick={() => {closeMenu();setView('auth')}}>Sign in <ArrowUpRight size={15}/></button>
         </nav>
       </header>
 

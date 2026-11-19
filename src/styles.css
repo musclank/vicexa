@@ -18,3 +18,20 @@
 .launch-footer{border-top:1px solid var(--line);padding:20px clamp(22px,4vw,58px);display:flex;justify-content:space-between;gap:15px;color:#777c91;font:8px 'DM Mono';letter-spacing:.12em}.launch-footer a{display:flex;align-items:center;gap:6px;color:#a5a9bb}.footer-dot{color:var(--cyan);padding:0 5px}
 @media(max-width:900px){.sidebar{width:215px;flex-basis:215px}.launch-welcome{padding:28px}.welcome-visual{transform:scale(.85)}.create-layout{grid-template-columns:1fr}.launch-info-panel{max-width:none}}
 @media(max-width:680px){.launch-app{display:block}.sidebar{position:relative;width:100%;height:auto;min-height:0;padding:15px 18px;border-right:0;border-bottom:1px solid var(--line)}.launch-brand{padding:0 0 14px}.network-pill{display:none}.side-label{display:none}.side-nav{display:flex;overflow-x:auto;gap:5px}.side-link{white-space:nowrap;width:auto;padding:10px;font-size:10px}.side-link svg{width:14px}.sidebar-bottom{display:none}.launch-topbar{height:60px;padding:0 18px}.breadcrumb{font-size:8px}.top-actions{gap:7px}.top-network,.icon-button{display:none}.wallet-button{padding:10px 11px;font-size:10px}.launch-content{padding:25px 17px 45px}.launch-welcome{grid-template-columns:1fr;padding:26px 22px;min-height:0}.launch-welcome h1,.page-title{font-size:61px}.welcome-visual{height:185px;grid-row:1;transform:scale(.75);margin:-5px 0}.launch-welcome>div:first-child{grid-row:2}.metric-grid{gap:7px}.metric-card{padding:12px 10px}.metric-card>b{font-size:19px}.metric-card>span{font-size:7px}.metric-card>small{font-size:8px}.content-heading{margin-top:35px}.content-heading h2{font-size:20px}.empty-launch-card{align-items:flex-start;flex-wrap:wrap;padding:15px}.empty-launch-card>div:nth-child(2){min-width:calc(100% - 65px)}.empty-launch-card .status-chip{margin-left:60px}.steps-grid{grid-template-columns:1fr}.launch-footer{padding:17px;flex-wrap:wrap;font-size:7px}.launch-footer>span:nth-child(2){display:none}.create-form,.launch-info-panel{padding:17px}.draft-card{align-items:flex-start}.draft-card .status-chip{font-size:7px}.page-title{font-size:57px}}
+
+
+/* Existing Supabase authentication screen */
+.account-shell{min-height:100vh;display:grid;place-items:center;padding:28px 18px;position:relative;background:radial-gradient(ellipse at 50% 20%,#24305280,transparent 48%),#080914}
+.account-back{position:absolute;top:28px;left:28px;display:flex;align-items:center;gap:9px;background:none;border:0;color:#aeb0c4;font:12px 'DM Mono';cursor:pointer}
+.account-panel{width:min(100%,460px);padding:42px;border:1px solid #ffffff22;background:linear-gradient(145deg,#15172a,#0c0d1a);box-shadow:0 20px 90px #0008}
+.account-symbol{width:48px;height:48px;display:grid;place-items:center;border:1px solid var(--cyan);color:var(--cyan);font-size:27px;margin-bottom:30px;box-shadow:0 0 24px #59efff25}
+.account-panel h1{font-size:clamp(38px,8vw,54px);margin:18px 0 10px}
+.account-intro{color:var(--muted);font-size:13px;line-height:1.7;margin-bottom:28px}
+.account-form{display:grid;gap:18px}.account-form label{display:grid;gap:8px}.account-form label>span{font:10px 'DM Mono';letter-spacing:.13em;color:#bfc0d0}
+.field-wrap{height:48px;display:flex;align-items:center;gap:11px;padding:0 13px;border:1px solid #ffffff26;background:#090a16;color:var(--cyan)}
+.field-wrap input{width:100%;min-width:0;background:transparent;border:0;outline:0;color:#fff;font:13px 'Space Grotesk'}.field-wrap input::placeholder{color:#666a80}
+.account-submit{width:100%;justify-content:center;border:0;cursor:pointer;margin-top:5px}.account-submit:disabled{opacity:.6}
+.account-message{padding:12px;border:1px solid #f0a4dc55;background:#f45bd811;color:#f4c7e9;font-size:12px;line-height:1.6}
+.account-switch{font-size:12px;color:var(--muted);text-align:center;margin:24px 0}.account-switch button{background:none;border:0;color:var(--cyan);font:inherit;cursor:pointer}
+.account-secure{display:block;text-align:center;color:#73758a;font:9px 'DM Mono';letter-spacing:.12em}
+@media(max-width:650px){.account-panel{padding:28px 22px}.account-back{top:18px;left:18px}}

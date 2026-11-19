@@ -1,20 +1,32 @@
-import { ArrowUpRight, Cpu, Wallet, Layers3, Zap, ShieldCheck, Menu } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { ArrowUpRight, Bell, ChevronDown, CircleHelp, Compass, ExternalLink, Flame, LayoutDashboard, LogOut, Plus, Rocket, Search, ShieldCheck, Sparkles, Wallet, X } from 'lucide-react'
 import Auth from './components/Auth'
-import Dashboard from './components/Dashboard'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
-const products = [
-  { icon: Cpu, number: '01', title: 'AI TOOLKIT', text: 'A growing collection of intelligent tools built to turn ideas into action.' },
-  { icon: Wallet, number: '02', title: 'CRYPTO PAYMENTS', text: 'A simple way to access digital services with supported crypto assets.' },
-  { icon: Layers3, number: '03', title: 'WEB3 ECOSYSTEM', text: 'Wallet-connected experiences, digital identity, and on-chain utilities.' },
+const BASE_CHAIN_ID = '0x2105'
+const BASE_PARAMS = {
+  chainId: BASE_CHAIN_ID,
+  chainName: 'Base',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: ['https://mainnet.base.org'],
+  blockExplorerUrls: ['https://basescan.org'],
+}
+const navItems = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'explore', label: 'Explore launches', icon: Compass },
+  { id: 'create', label: 'Create a launch', icon: Plus },
 ]
 
 function App() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [view, setView] = useState('home')
   const [session, setSession] = useState(null)
-  const closeMenu = () => setMenuOpen(false)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [active, setActive] = useState('overview')
+  const [account, setAccount] = useState('')
+  const [walletBusy, setWalletBusy] = useState(false)
+  const [walletError, setWalletError] = useState('')
+  const [drafts, setDrafts] = useState([])
+  const [form, setForm] = useState({ name: '', ticker: '', description: '', website: '' })
+  const [notice, setNotice] = useState('')
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -24,87 +36,100 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (session) setView('dashboard')
-  }, [session])
+    if (!window.ethereum) return
+    window.ethereum.request({ method: 'eth_accounts' }).then(accounts => {
+      if (accounts?.[0]) setAccount(accounts[0])
+    }).catch(() => {})
+    const onAccounts = accounts => setAccount(accounts?.[0] || '')
+    window.ethereum.on?.('accountsChanged', onAccounts)
+    return () => window.ethereum.removeListener?.('accountsChanged', onAccounts)
+  }, [])
+
+  async function connectWallet() {
+    setWalletError('')
+    if (!window.ethereum) {
+      setWalletError('No EVM wallet detected. Install MetaMask or Coinbase Wallet to continue.')
+      return
+    }
+    setWalletBusy(true)
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
+      try {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_CHAIN_ID }] })
+      } catch (switchError) {
+        if (switchError.code !== 4902) throw switchError
+        await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [BASE_PARAMS] })
+      }
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' })
+      if (chainId !== BASE_CHAIN_ID) throw new Error('Please switch your wallet to Base Mainnet.')
+      setAccount(accounts?.[0] || '')
+    } catch (error) {
+      setWalletError(error.message || 'Wallet connection was cancelled.')
+    } finally {
+      setWalletBusy(false)
+    }
+  }
 
   async function signOut() {
     if (supabase) await supabase.auth.signOut()
     setSession(null)
-    setView('home')
   }
 
-  if (view === 'auth' && !session) return <Auth onBack={() => setView('home')} onAuthenticated={setSession} />
-  if (view === 'dashboard' && session) return <Dashboard session={session} onSignOut={signOut} />
+  function submitDraft(event) {
+    event.preventDefault()
+    if (!form.name.trim() || !form.ticker.trim() || !form.description.trim()) return
+    const item = { ...form, ticker: form.ticker.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10), id: Date.now() }
+    setDrafts(current => [item, ...current])
+    setForm({ name: '', ticker: '', description: '', website: '' })
+    setNotice('Project application saved in this browser as a draft. No token has been deployed.')
+    setActive('explore')
+  }
+
+  const shortAddress = account ? account.slice(0, 6) + '...' + account.slice(-4) : ''
+  const userName = session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0]
+
+  if (authOpen && !session) return <Auth onBack={() => setAuthOpen(false)} onAuthenticated={next => { setSession(next); setAuthOpen(false) }} />
 
   return (
-    <main>
-      <div className="grid-glow" aria-hidden="true" />
-      <header className="nav wrap">
-        <a className="brand" href="#" aria-label="VICEXA home"><span className="brand-mark">V</span> VICEXA</a>
-        <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle navigation"><Menu size={21}/></button>
-        <nav className={menuOpen ? 'nav-links open' : 'nav-links'}>
-          <a href="#ecosystem" onClick={closeMenu}>Ecosystem</a>
-          <a href="#vision" onClick={closeMenu}>Vision</a>
-          <a href="#roadmap" onClick={closeMenu}>Roadmap</a>
-          <button className="nav-cta" onClick={() => {closeMenu();setView('auth')}}>Sign in <ArrowUpRight size={15}/></button>
+    <main className="launch-app">
+      <aside className="sidebar">
+        <a className="launch-brand" href="#" onClick={e => { e.preventDefault(); setActive('overview') }}><span className="brand-mark">V</span><span>VICEXA<small>LAUNCHPAD</small></span></a>
+        <div className="network-pill"><span/> BASE MAINNET <ChevronDown size={13}/></div>
+        <div className="side-label">WORKSPACE</div>
+        <nav className="side-nav">
+          {navItems.map(({ id, label, icon: Icon }) => <button key={id} className={active === id ? 'side-link active' : 'side-link'} onClick={() => { setActive(id); setNotice('') }}><Icon size={17}/>{label}{id === 'create' && <span className="side-plus">+</span>}</button>)}
         </nav>
-      </header>
+        <div className="sidebar-bottom">
+          <div className="help-card"><CircleHelp size={17}/><b>Need help?</b><span>Learn how VICEXA works.</span><a href="https://docs.base.org/" target="_blank" rel="noreferrer">Base developer docs <ArrowUpRight size={12}/></a></div>
+          {session ? <button className="profile-button" onClick={signOut}><span className="profile-avatar">{(userName || 'V').slice(0,1).toUpperCase()}</span><span className="profile-copy"><b>{userName}</b><small>Sign out</small></span><LogOut size={15}/></button> : <button className="profile-button" onClick={() => setAuthOpen(true)}><span className="profile-avatar">V</span><span className="profile-copy"><b>Guest workspace</b><small>Sign in or create account</small></span><ArrowUpRight size={15}/></button>}
+        </div>
+      </aside>
 
-      <section className="hero wrap">
-        <div className="hero-copy">
-          <div className="eyebrow"><span className="pulse" /> THE NEXT DIGITAL FRONTIER</div>
-          <h1>AI MEETS<br/><span className="gradient-text">CRYPTO.</span></h1>
-          <p className="hero-sub">One ecosystem. Endless possibilities.</p>
-          <p className="hero-body">A new digital universe where intelligent tools and decentralized technology move together. Built for creators, builders, and the next generation of the internet.</p>
-          <div className="hero-actions">
-            <a className="button primary" href="#ecosystem">Explore ecosystem <ArrowUpRight size={17}/></a>
-            <a className="button secondary" href="#vision">Discover VICEXA</a>
-          </div>
-          <div className="hero-note"><span className="line"/> IN DEVELOPMENT <span className="note-dot"/> BUILT FOR WHAT'S NEXT</div>
+      <section className="launch-main">
+        <header className="launch-topbar">
+          <div className="breadcrumb">VICEXA <span>/</span> {navItems.find(item => item.id === active)?.label.toUpperCase()}</div>
+          <div className="top-actions"><span className="top-network"><i/> BASE</span><button className="icon-button" aria-label="Notifications"><Bell size={17}/></button><button className="wallet-button" onClick={connectWallet} disabled={walletBusy}><Wallet size={16}/>{walletBusy ? 'CONNECTING…' : shortAddress || 'Connect wallet'}</button></div>
+        </header>
+
+        <div className="launch-content">
+          {walletError && <div className="launch-alert"><span>{walletError}</span><button onClick={() => setWalletError('')} aria-label="Dismiss"><X size={15}/></button></div>}
+          {notice && <div className="launch-alert success-alert"><span>{notice}</span><button onClick={() => setNotice('')} aria-label="Dismiss"><X size={15}/></button></div>}
+
+          {active === 'overview' && <>
+            <div className="launch-welcome"><div><div className="launch-eyebrow"><span/> THE BASE ECOSYSTEM, ONE LAUNCH AT A TIME</div><h1>BUILD WHAT'S<br/><span className="launch-gradient">NEXT.</span></h1><p>Discover emerging projects, prepare your token launch, and grow with the VICEXA community.</p><div className="welcome-actions"><button className="launch-primary" onClick={() => setActive('explore')}>Explore launches <ArrowUpRight size={16}/></button><button className="launch-secondary" onClick={() => setActive('create')}>Create a project <Plus size={16}/></button></div></div><div className="welcome-visual"><div className="visual-ring ring-a"/><div className="visual-ring ring-b"/><div className="visual-v">V</div><span className="visual-caption">BUILT ON BASE / 8453</span></div></div>
+            <div className="metric-grid"><div className="metric-card"><span>NETWORK</span><b>BASE</b><small>Ethereum Layer 2</small></div><div className="metric-card"><span>LIVE LAUNCHES</span><b>—</b><small>Launch feed coming online</small></div><div className="metric-card"><span>YOUR PROJECTS</span><b>{drafts.length}</b><small>Saved drafts in this browser</small></div></div>
+            <div className="content-heading"><div><div className="launch-eyebrow">DISCOVER</div><h2>Explore the ecosystem</h2></div><button className="text-action" onClick={() => setActive('explore')}>View all <ArrowUpRight size={14}/></button></div>
+            <div className="empty-launch-card"><div className="empty-icon"><Rocket size={22}/></div><div><b>The launch feed is getting ready.</b><p>Projects will appear here when the VICEXA launch registry and on-chain indexer are connected.</p></div><span className="status-chip">IN DEVELOPMENT</span></div>
+            <div className="content-heading"><div><div className="launch-eyebrow">HOW IT WORKS</div><h2>From idea to on-chain</h2></div></div>
+            <div className="steps-grid"><div><span>01</span><b>Prepare</b><p>Submit your project details and define your launch plan.</p></div><div><span>02</span><b>Review</b><p>Complete project checks and configure launch parameters.</p></div><div><span>03</span><b>Launch</b><p>Deploy through the verified VICEXA launch contracts when available.</p></div></div>
+          </>}
+
+          {active === 'explore' && <section className="page-section"><div className="launch-eyebrow"><span/> BASE PROJECT DIRECTORY</div><h1 className="page-title">EXPLORE<br/><span className="launch-gradient">LAUNCHES.</span></h1><p className="page-lead">Find projects preparing to launch on Base.</p>{drafts.length === 0 ? <div className="large-empty"><div className="empty-icon"><Search size={24}/></div><h2>No projects listed yet</h2><p>The public launch directory will populate after the VICEXA registry and review workflow are connected.</p><button className="launch-primary" onClick={() => setActive('create')}>Submit a project <Plus size={16}/></button></div> : <div className="draft-list">{drafts.map(draft => <article className="draft-card" key={draft.id}><div className="draft-token">{draft.ticker.slice(0,1)}</div><div className="draft-info"><b>{draft.name} <span>${draft.ticker}</span></b><p>{draft.description}</p><small>LOCAL DRAFT · NOT ON-CHAIN</small></div><span className="status-chip">DRAFT</span></article>)}</div>}</section>}
+
+          {active === 'create' && <section className="page-section"><div className="launch-eyebrow"><span/> PROJECT ONBOARDING</div><h1 className="page-title">START YOUR<br/><span className="launch-gradient">LAUNCH.</span></h1><p className="page-lead">Introduce your project to the VICEXA ecosystem on Base.</p><div className="create-layout"><form className="create-form" onSubmit={submitDraft}><div className="form-heading"><b>Project details</b><span>STEP 01 / 02</span></div><label>PROJECT NAME<input required maxLength={48} placeholder="e.g. Frontier Protocol" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}/></label><label>TOKEN TICKER<input required maxLength={10} placeholder="e.g. FRONT" value={form.ticker} onChange={e => setForm({ ...form, ticker: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}/><small>Letters and numbers only. Maximum 10 characters.</small></label><label>PROJECT DESCRIPTION<textarea required maxLength={500} rows={4} placeholder="What are you building? What problem does it solve?" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}/><small>{form.description.length}/500 characters</small></label><label>WEBSITE <span className="optional">OPTIONAL</span><input type="url" placeholder="https://yourproject.xyz" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })}/></label><button className="launch-primary submit-draft" type="submit">Save project draft <ArrowUpRight size={16}/></button><p className="form-disclaimer">Saving a draft does not create a token or submit an on-chain transaction.</p></form><aside className="launch-info-panel"><ShieldCheck size={22}/><b>Built on Base</b><p>VICEXA is designed for Base Mainnet. Wallet connection is available now; token deployment will be enabled after the launch factory contract is deployed and verified.</p><div className="info-divider"/><b>What happens next?</b><ul><li>Save your project details</li><li>Complete project verification</li><li>Configure token and liquidity parameters</li><li>Deploy through the official launch contract</li></ul><span className="status-chip">ON-CHAIN LAUNCH: NOT YET ENABLED</span></aside></div></section>}
         </div>
-        <div className="hero-art" aria-label="Abstract neon VICEXA emblem">
-          <div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="orbit orbit-three"/>
-          <div className="core"><div className="core-inner">V</div></div>
-          <span className="float-label label-top">INTELLIGENCE / 01</span>
-          <span className="float-label label-bottom">DECENTRALIZED / 02</span>
-          <span className="art-cross cross-a">+</span><span className="art-cross cross-b">+</span>
-        </div>
+        <footer className="launch-footer"><span>© {new Date().getFullYear()} VICEXA</span><span>POWERED BY BASE <span className="footer-dot">·</span> BUILT FOR WHAT'S NEXT</span><a href="https://basescan.org/" target="_blank" rel="noreferrer">BASESCAN <ExternalLink size={12}/></a></footer>
       </section>
-
-      <section className="ticker" aria-label="VICEXA principles">
-        <div>INTELLIGENCE <b>✳</b> OWNERSHIP <b>✳</b> ACCESS <b>✳</b> INNOVATION <b>✳</b> INTELLIGENCE <b>✳</b> OWNERSHIP <b>✳</b> ACCESS <b>✳</b></div>
-      </section>
-
-      <section className="section wrap" id="ecosystem">
-        <div className="section-heading">
-          <div><div className="eyebrow">01 / THE ECOSYSTEM</div><h2>TOOLS FOR A<br/><span className="gradient-text">NEW REALITY.</span></h2></div>
-          <p>One connected platform. Multiple ways to create, transact, and grow in the digital world.</p>
-        </div>
-        <div className="cards">
-          {products.map(({icon: Icon, number, title, text}) => <article className="product-card" key={number}>
-            <div className="card-top"><span>{number} / 03</span><Icon size={23}/></div>
-            <h3>{title}</h3><p>{text}</p><span className="card-status">IN DEVELOPMENT</span>
-          </article>)}
-        </div>
-      </section>
-
-      <section className="vision-section" id="vision">
-        <div className="wrap vision-grid">
-          <div><div className="eyebrow">02 / THE VISION</div><h2>MAKE THE<br/>COMPLEX<br/><span className="gradient-text">FEEL SIMPLE.</span></h2></div>
-          <div className="vision-copy"><p>VICEXA is being built around a simple idea: powerful technology should feel accessible. We are bringing useful AI experiences and crypto-powered access into one coherent platform.</p><div className="principle"><Zap/><div><b>UTILITY FIRST</b><span>Build useful products before adding complexity.</span></div></div><div className="principle"><ShieldCheck/><div><b>BUILT WITH CARE</b><span>Security, transparency, and clear product states matter.</span></div></div></div>
-        </div>
-      </section>
-
-      <section className="section wrap roadmap" id="roadmap">
-        <div className="eyebrow">03 / WHAT COMES NEXT</div><h2>THE BUILD<br/><span className="gradient-text">STARTS HERE.</span></h2>
-        <div className="roadmap-list">
-          <div><span>PHASE 01</span><b>Foundation</b><small>Brand, responsive website, deployment pipeline</small><em>IN PROGRESS</em></div>
-          <div><span>PHASE 02</span><b>Core Platform</b><small>Accounts, dashboard, and AI tool framework</small><em>PLANNED</em></div>
-          <div><span>PHASE 03</span><b>Web3 Layer</b><small>Wallet connection and supported crypto payments</small><em>PLANNED</em></div>
-        </div>
-      </section>
-
-      <footer className="footer wrap"><a className="brand" href="#"><span className="brand-mark">V</span> VICEXA</a><span>THE NEXT DIGITAL FRONTIER.</span><small>© {new Date().getFullYear()} VICEXA. ALL SYSTEMS IN DEVELOPMENT.</small></footer>
     </main>
   )
 }

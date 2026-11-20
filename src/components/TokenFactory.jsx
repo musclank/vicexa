@@ -58,11 +58,11 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
         throw new Error('The active wallet account changed. Reconnect your wallet and try again.')
       }
       const approved = window.confirm(
-        'Review your token launch on Base Mainnet.\\n\\n' +
-        'Name: ' + v.name + '\\n' +
-        'Symbol: ' + v.symbol + '\\n' +
-        'Buy tax: ' + v.buyFee + '% · Sell tax: ' + v.sellFee + '%\\n' +
-        'Wallet: ' + activeWallet + '\\n\\n' +
+        'Review your token launch on Base Mainnet.\n\n' +
+        'Name: ' + v.name + '\n' +
+        'Symbol: ' + v.symbol + '\n' +
+        'Buy tax: ' + v.buyFee + '% · Sell tax: ' + v.sellFee + '%\n' +
+        'Wallet: ' + activeWallet + '\n\n' +
         'This submits a real Clanker V5 deployment transaction and uses ETH for gas. Continue to the wallet for final review?'
       )
       if (!approved) { setTxBusy(false); return }

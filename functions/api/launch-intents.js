@@ -76,9 +76,11 @@ export async function onRequestPatch({ request, env }) {
   if (status === "confirmed") {
     const txHash = String(body.txHash || "");
     const tokenAddress = String(body.tokenAddress || "");
-    const expectedAddress = String(existing.expected_token_address || "");
-    if (existing.status !== "submitted" || !env.BASE_RPC_URL || !/^0x[a-fA-F0-9]{64}$/.test(txHash) || txHash.toLowerCase() !== String(existing.transaction_hash || "").toLowerCase() || !/^0x[a-fA-F0-9]{40}$/.test(tokenAddress) || !expectedAddress || expectedAddress.toLowerCase() !== tokenAddress.toLowerCase()) {
-      return json({ error: "Confirmation must match the submitted transaction and predicted token address." }, 409);
+    const expectedAddress = String(body.expectedAddress || existing.expected_token_address || "");
+    const allowedPriorStates = ["awaiting_wallet", "submitted", "pending_indexing"];
+    const storedHash = String(existing.transaction_hash || "");
+    if (!allowedPriorStates.includes(existing.status) || !env.BASE_RPC_URL || !/^0x[a-fA-F0-9]{64}$/.test(txHash) || (storedHash && txHash.toLowerCase() !== storedHash.toLowerCase()) || !/^0x[a-fA-F0-9]{40}$/.test(tokenAddress) || !/^0x[a-fA-F0-9]{40}$/.test(expectedAddress) || expectedAddress.toLowerCase() !== tokenAddress.toLowerCase()) {
+      return json({ error: "Confirmation must match this launch, transaction hash, and predicted token address." }, 409);
     }
     const rpc = async (method, params) => {
       const response = await fetch(env.BASE_RPC_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }) });
@@ -100,6 +102,7 @@ export async function onRequestPatch({ request, env }) {
     } catch {
       return json({ error: "Could not independently verify the Base transaction. Keep the launch pending and check again." }, 503);
     }
+    patch.transaction_hash = txHash;
     patch.expected_token_address = tokenAddress;
     patch.confirmed_at = new Date().toISOString();
   }

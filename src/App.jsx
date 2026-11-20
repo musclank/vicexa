@@ -36,7 +36,7 @@ const infoPages = {
       { heading: '3. Explore tokens', paragraphs: ['The Explore Tokens directory displays launches that have been confirmed and indexed by VICEXA. Select a token to inspect its available details and use the BaseScan or Clanker links when provided to verify on-chain information. Listing status is not an endorsement of a token.'] },
       { heading: '4. Prepare a token', paragraphs: ['Open “Create a token” and complete the fields shown in the token configuration flow. Review the token name, symbol, supply, decimals, fees, and any other transaction parameters presented by the interface before continuing. Available options may change as the integration evolves.'] },
       { heading: '5. Review and authorize', paragraphs: ['Read the wallet confirmation screen carefully. Check the network, transaction destination, permissions, and estimated network fee. Only approve a transaction you understand. Blockchain transactions are generally irreversible once confirmed.'] },
-      { heading: '6. Drafts and launch status', paragraphs: ['A locally saved draft is only a convenience copy in the current browser. It is not a deployed token, does not reserve a token name or symbol, and may not appear on another device. A token should be treated as launched only after its deployment is confirmed on-chain.'] },
+      { heading: '6. Launch status', paragraphs: ['A token should be treated as launched only after its deployment is confirmed on-chain. Preparing a configuration does not deploy a token.'] },
       { heading: '7. Network and data', paragraphs: ['VICEXA is designed for Base Mainnet. Token listings depend on successful indexing and the availability of the configured services. Market metrics may be unavailable until a reliable data provider is connected; VICEXA will label unavailable metrics rather than invent values.'] }
     ]
   },
@@ -62,10 +62,10 @@ const infoPages = {
     sections: [
       { heading: '1. Information you provide', paragraphs: ['If you create an account or contact support, information you submit may include an email address, profile details, and the contents of your message. Do not submit passwords, seed phrases, private keys, or sensitive personal information.'] },
       { heading: '2. Wallet and public blockchain data', paragraphs: ['If you connect a wallet, the public wallet address may be processed to establish the connection and prepare transactions. Wallet addresses and blockchain transactions are public by design and may be visible on public explorers. VICEXA cannot make public blockchain activity private.'] },
-      { heading: '3. Local browser storage', paragraphs: ['Some draft information may be stored in your browser using local storage so it remains available on that browser. Clearing browser data or changing devices may remove access to those drafts. Do not use local drafts as your only record of important information.'] },
+      
       { heading: '4. Service providers', paragraphs: ['VICEXA may rely on configured infrastructure providers for authentication, database hosting, blockchain RPC access, token indexing, and deployment. Information processed by those providers is subject to their own privacy terms and the configuration selected by the platform operator.'] },
       { heading: '5. Use and retention', paragraphs: ['Information may be used to operate the platform, provide account features, display token listings, respond to support requests, maintain security, and meet legal obligations. Retention periods depend on the data type and the provider settings.'] },
-      { heading: '6. Your choices and security', paragraphs: ['You can disconnect your wallet through your wallet provider and sign out of your VICEXA account where that feature is available. You can clear locally stored drafts through your browser settings. No internet-connected service can guarantee absolute security; protect your devices and credentials.'] },
+      { heading: '6. Your choices and security', paragraphs: ['You can disconnect your wallet through your wallet provider and sign out of your VICEXA account where that feature is available. No internet-connected service can guarantee absolute security; protect your devices and credentials.'] },
       { heading: '7. Changes and contact', paragraphs: ['This policy may be updated when VICEXA features or service providers change. For privacy questions or requests, contact the VICEXA team through the Support page. Applicable privacy rights may vary by your location.'] }
     ]
   },
@@ -84,12 +84,12 @@ const infoPages = {
   faq: {
     eyebrow: 'HELP CENTER',
     title: 'FREQUENTLY ASKED QUESTIONS',
-    intro: 'Quick answers about wallets, token listings, drafts, and the VICEXA launch flow.',
+    intro: 'Quick answers about wallets, token listings, and the VICEXA launch flow.',
     sections: [
       { heading: 'Which network does VICEXA support?', paragraphs: ['VICEXA is configured for Base Mainnet, Chain ID 8453. Check that your wallet is on the correct network before signing a transaction.'] },
       { heading: 'Does connecting a wallet deploy a token?', paragraphs: ['No. Connecting a wallet only establishes a wallet connection. A deployment requires a separate transaction that you must review and approve in your wallet.'] },
       { heading: 'Why does Explore show no tokens?', paragraphs: ['The directory lists confirmed and indexed launches. If no qualifying launch has been indexed, the page will show an empty state. Indexing may take time after an on-chain transaction.'] },
-      { heading: 'Are saved drafts deployed on Base?', paragraphs: ['No. Browser-saved drafts are local configuration notes. They do not create a contract, reserve a ticker, or submit a blockchain transaction.'] },
+      
       { heading: 'Why are market cap or volume unavailable?', paragraphs: ['Those metrics require a verified market-data source. VICEXA may show a pending state until a reliable feed is configured; do not interpret pending data as zero.'] },
       { heading: 'Can a confirmed token be considered safe?', paragraphs: ['No. Confirmation means the listing has met the platform’s indexing criteria. It is not an audit, endorsement, or guarantee of safety, liquidity, or value.'] },
       { heading: 'What if a transaction fails?', paragraphs: ['Check your wallet network, available balance for network fees, and the transaction status on BaseScan. Do not repeatedly sign transactions you do not understand. If the issue persists, send the public transaction hash and a description through Support. Never send private keys or recovery phrases.'] }
@@ -132,8 +132,6 @@ function App() {
   const [account, setAccount] = useState('')
   const [walletBusy, setWalletBusy] = useState(false)
   const [walletError, setWalletError] = useState('')
-  const [drafts, setDrafts] = useState(() => { try { return JSON.parse(localStorage.getItem('vicexa-project-drafts') || '[]') } catch { return [] } })
-  const [form, setForm] = useState({ name: '', ticker: '', description: '', website: '' })
   const [publishedTokens, setPublishedTokens] = useState([])
   const [directoryLoading, setDirectoryLoading] = useState(true)
   const [directoryError, setDirectoryError] = useState('')
@@ -147,10 +145,6 @@ function App() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
     return () => listener.subscription.unsubscribe()
   }, [])
-
-  useEffect(() => {
-    localStorage.setItem('vicexa-project-drafts', JSON.stringify(drafts))
-  }, [drafts])
 
   useEffect(() => {
     let cancelled = false
@@ -240,23 +234,6 @@ function App() {
     setSession(null)
   }
 
-  function submitDraft(event) {
-    event.preventDefault()
-    if (!form.name.trim() || !form.ticker.trim() || !form.description.trim()) return
-    const item = { ...form, ticker: form.ticker.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10), id: Date.now() }
-    setDrafts(current => [item, ...current])
-    setForm({ name: '', ticker: '', description: '', website: '' })
-    setNotice('Project application saved in this browser as a draft. No token has been deployed.')
-    setActive('explore')
-  }
-
-  function saveTokenDraft(token) {
-    const item = { ...token, id: Date.now() }
-    setDrafts(current => [item, ...current])
-    setNotice('Token configuration saved locally. No contract has been deployed.')
-    setActive('explore')
-  }
-
   const shortAddress = account ? account.slice(0, 6) + '...' + account.slice(-4) : ''
   const userName = session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0]
   const creatorCounts = publishedTokens.reduce((map, token) => { const key = token.creator_wallet || 'Unknown creator'; map[key] = (map[key] || 0) + 1; return map }, {})
@@ -291,7 +268,7 @@ function App() {
 
           {active === 'overview' && <>
             <div className="launch-welcome"><div><div className="launch-eyebrow"><span/> THE BASE ECOSYSTEM, ONE TOKEN AT A TIME</div><h1>BUILD WHAT'S<br/><span className="launch-gradient">NEXT.</span></h1><p>Create and configure your own token for Base with a simple, guided workflow.</p><div className="welcome-actions"><button className="launch-primary" onClick={() => setActive('explore')}>Explore launches <ArrowUpRight size={16}/></button><button className="launch-secondary" onClick={() => setActive('create')}>Create a token <Plus size={16}/></button></div></div><div className="welcome-visual"><div className="visual-ring ring-a"/><div className="visual-ring ring-b"/><div className="visual-wordmark" aria-label="VICEXA">VICEXA</div><span className="visual-caption">BUILT ON BASE MAINNET / 8453</span></div></div>
-            <div className="metric-grid"><div className="metric-card"><span>NETWORK</span><b>BASE MAINNET</b><small>Production network · Chain ID 8453</small></div><div className="metric-card"><span>DEPLOYED TOKENS</span><b>{publishedTokens.length}</b><small>Confirmed Clanker V5 tokens on Base</small></div><div className="metric-card"><span>YOUR TOKEN DRAFTS</span><b>{drafts.length}</b><small>Browser-only drafts · not yet launched</small></div></div>
+            <div className="metric-grid"><div className="metric-card"><span>NETWORK</span><b>BASE MAINNET</b><small>Production network · Chain ID 8453</small></div><div className="metric-card"><span>DEPLOYED TOKENS</span><b>{publishedTokens.length}</b><small>Confirmed Clanker V5 tokens on Base</small></div></div>
             <section className="market-strip">
               <div className="market-heading"><div><div className="launch-eyebrow"><span/> MARKET PULSE</div><h2>THE CITY IS MOVING.</h2></div><span className="market-live"><i/> DIRECTORY SYNC</span></div>
               <div className="market-grid">
@@ -333,7 +310,7 @@ function App() {
             {!directoryLoading && !directoryError && publishedTokens.length === 0 && <div className="large-empty"><div className="empty-icon"><Search size={24}/></div><h2>No tokens listed yet</h2><p>Successfully confirmed Base Mainnet deployments will appear here automatically.</p><button className="launch-primary" onClick={() => setActive('create')}>Create a token <Plus size={16}/></button></div>}
           </section>}
 
-          {active === 'create' && <TokenFactory account={account} onSaveDraft={saveTokenDraft} session={session}/>}
+          {active === 'create' && <TokenFactory account={account} session={session}/>}
           {infoPages[active] && <InfoPage page={infoPages[active]} />}
 
         </div>

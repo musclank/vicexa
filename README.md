@@ -10,6 +10,7 @@ VICEXA is a Base-focused Token Factory interface built with React and Vite. The 
 - Plain CSS
 - Base Mainnet wallet connection (EVM-compatible browser wallets)
 - Cloudflare Pages deployment
+- Supabase authentication
 
 ## Local development
 ```bash
@@ -32,31 +33,33 @@ Connect this repository to a Cloudflare Pages project with:
 - Build output directory: `dist`
 - Root directory: `/`
 
-Each push to `main` should trigger a new production deployment when the Git integration is connected.
+Each push to `main` triggers a production deployment when the Git integration is connected.
 
 ## Current frontend scope
-- VICEXA Base-first launchpad interface
-- Overview and launch discovery screens
-- Create-launch form with local draft persistence in the current browser
+- VICEXA Base-first Token Factory interface
+- Overview and token discovery screens
+- Token configuration form: name, symbol, initial supply, decimals, description, and website
+- Local token draft persistence in the current browser
 - EVM wallet connection when a compatible browser wallet is available
 - Base Mainnet chain detection and switch/add-network flow
+- Google and email authentication through Supabase
 - Responsive dark interface
 
 ## Not live yet
-- Public on-chain launch registry
-- Launch factory or token deployment smart contracts
-- On-chain project creation and launch execution
-- Liquidity provisioning, trading, and live market indexing
-- Server-side project draft storage
+- ERC-20 token factory smart contract
+- On-chain token deployment and transaction flow
+- Public on-chain token registry and indexing
+- Server-side token draft storage
+- Independent smart contract security review
 
-Project drafts currently remain in the browser's local storage and are not published to the blockchain or shared with other users. Do not treat the current interface as a production launch service.
+Token configurations currently remain in the browser's local storage. Saving a draft does not deploy a token, mint supply, or send a blockchain transaction. Do not treat the current interface as a production token deployment service.
 
 ## Next development stages
-1. Build and test the launch factory on Base Sepolia.
-2. Add secure backend storage and a public launch registry.
-3. Implement launch configuration, validation, and transaction flows.
-4. Add indexing, launch status, and market data.
-5. Complete security review before any Base Mainnet launch.
+1. Implement a minimal ERC-20 factory contract with deployment events.
+2. Compile and test factory deployment and token creation on Base Sepolia.
+3. Add transaction simulation, wallet confirmation, and error handling.
+4. Add a public on-chain token registry and indexing.
+5. Complete independent security review before enabling Base Mainnet deployments.
 
 ## Environment variables
 Copy `.env.example` to `.env.local` when backend integrations are introduced. Only public client keys may use the `VITE_` prefix. Never expose Supabase service-role keys, private keys, seed phrases, or wallet secrets in frontend code.

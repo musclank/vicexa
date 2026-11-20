@@ -183,3 +183,33 @@ body{
 .brand-mark-duo img{display:block;width:100%;height:100%;object-fit:cover}
 .launch-brand{gap:12px}
 @media(max-width:680px){.brand-mark-duo{width:36px;height:36px;flex-basis:36px}}
+
+
+/* Original GTA-inspired VICEXA hero wordmark */
+.visual-wordmark{
+  position:relative;z-index:2;
+  display:flex;align-items:center;justify-content:center;
+  width:min(100%,330px);min-height:118px;padding:12px 18px;
+  color:#fff5f8;
+  font-family:Impact,'Arial Black',system-ui,sans-serif;
+  font-size:clamp(42px,5.5vw,76px);font-weight:1000;
+  font-style:italic;letter-spacing:-.075em;line-height:.9;
+  white-space:nowrap;
+  -webkit-text-stroke:1.5px #28112f;
+  text-shadow:
+    3px 4px 0 #24102f,
+    6px 7px 0 #e52c91,
+    0 0 18px #ff4fa3,
+    0 0 38px #ff4fa377;
+  transform:skew(-7deg) rotate(-3deg);
+  filter:drop-shadow(0 12px 22px #070512aa);
+}
+.visual-wordmark:after{
+  content:"";position:absolute;left:12%;right:4%;bottom:5px;height:7px;
+  border-radius:100%;transform:skew(-18deg) rotate(-3deg);
+  background:linear-gradient(90deg,#ff9b62,#ff4fa3 55%,#69f4ff);
+  box-shadow:0 0 18px #ff4fa3aa;
+}
+@media(max-width:680px){
+ .visual-wordmark{font-size:clamp(36px,10vw,58px);min-height:88px}
+}

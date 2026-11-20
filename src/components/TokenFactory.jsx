@@ -16,7 +16,7 @@ export default function TokenFactory({ account, onSaveDraft }) {
   const [error, setError] = useState('')
 
   const formattedSupply = useMemo(() => {
-    if (!/^\\d+$/.test(form.supply)) return '—'
+    if (!/^\d+$/.test(form.supply)) return '—'
     try { return new Intl.NumberFormat('en-US').format(BigInt(form.supply)) } catch { return '—' }
   }, [form.supply])
 
@@ -37,8 +37,13 @@ export default function TokenFactory({ account, onSaveDraft }) {
       setError('Enter a token name and a symbol containing 2–10 letters or numbers.')
       return
     }
-    if (!Number.isFinite(supply) || supply <= 0 || !/^\d+(\.\d+)?$/.test(form.supply.trim())) {
-      setError('Enter a valid total supply greater than zero.')
+    if (!/^\d+$/.test(supplyText) || BigInt(supplyText) <= 0n) {
+      setError('Enter a whole-number token supply greater than zero.')
+      return
+    }
+    const maxSupply = ((1n << 256n) - 1n) / (10n ** BigInt(decimals))
+    if (BigInt(supplyText) > maxSupply) {
+      setError('This supply is too large for the selected decimals.')
       return
     }
     if (form.description.trim().length > 500) {
@@ -76,7 +81,7 @@ export default function TokenFactory({ account, onSaveDraft }) {
           </label>
           <div className="factory-field-grid">
             <label>TOTAL SUPPLY
-              <input required inputMode="decimal" type="text" placeholder="1000000000" value={form.supply} onChange={e => update('supply', e.target.value.replace(/\\D/g, ''))}/>
+              <input required inputMode="decimal" type="text" placeholder="1000000000" value={form.supply} onChange={e => update('supply', e.target.value.replace(/\D/g, ''))}/>
               <small>Whole-token amount before decimals are applied.</small>
             </label>
             <label>TOKEN DECIMALS

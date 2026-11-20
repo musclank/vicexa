@@ -41,3 +41,115 @@
 .auth-top-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border:1px solid #59efff70;background:#59efff0b;color:#bdf9ff;font:10px 'DM Mono';letter-spacing:.08em;white-space:nowrap}
 .auth-top-button:hover{background:#59efff18;border-color:var(--cyan)}
 @media(max-width:680px){.auth-top-button{min-height:34px;padding:0 10px;font-size:9px}.top-actions{gap:7px}}
+
+
+/* VICEXA Vice City / GTA VI-inspired visual refresh */
+:root{
+  --cyan:#69f4ff;--pink:#ff4fa3;--muted:#d0b7c6;--panel:#17101d;--line:#ffffff30;
+  --vice-orange:#ff9b62;--vice-violet:#a77bff;
+}
+html{background:#160d25}
+body{
+  background:
+    linear-gradient(180deg,rgba(14,8,28,.22) 0%,rgba(17,9,28,.64) 42%,#100b1b 100%),
+    radial-gradient(ellipse at 76% 12%,#ff6b9c70 0,transparent 34%),
+    radial-gradient(ellipse at 12% 8%,#ffb45b55 0,transparent 32%),
+    linear-gradient(135deg,#392047 0%,#75405f 30%,#24365a 62%,#101a32 100%);
+  background-attachment:fixed;
+}
+.launch-app{
+  background:
+    linear-gradient(180deg,rgba(12,8,22,.26),rgba(12,8,22,.72)),
+    radial-gradient(ellipse at 70% 0%,#ff65a52b,transparent 42%),
+    transparent;
+  position:relative;isolation:isolate;
+}
+.launch-app:before{
+  content:"";position:fixed;z-index:-1;inset:0;pointer-events:none;opacity:.5;
+  background:
+    linear-gradient(180deg,transparent 0 54%,rgba(10,9,24,.25) 55%,rgba(8,9,23,.85) 100%),
+    repeating-linear-gradient(90deg,transparent 0 7.5%,rgba(255,255,255,.025) 7.6% 7.72%,transparent 7.8% 15%);
+}
+.sidebar{
+  background:linear-gradient(180deg,rgba(25,13,34,.94),rgba(11,12,27,.97));
+  border-right-color:#ff8cbd40;backdrop-filter:blur(18px);
+}
+.launch-topbar{
+  background:rgba(19,12,30,.72);border-bottom-color:#ff8cbd40;backdrop-filter:blur(18px);
+}
+.launch-brand{letter-spacing:.2em}
+.brand-mark{
+  border-color:#ff78ad;color:#ff9bc5;
+  box-shadow:0 0 22px #ff4fa34d,inset 0 0 12px #ff4fa322;
+}
+.network-pill{
+  border-color:#69f4ff55;background:#69f4ff12;color:#d7fcff;
+}
+.network-pill>span,.top-network i,.launch-eyebrow>span{
+  background:#69f4ff;box-shadow:0 0 12px #69f4ff;
+}
+.side-link:hover,.side-link.active{background:linear-gradient(90deg,#ff4fa326,#69f4ff0c);color:#fff}
+.side-link.active{border-left-color:#ff6da9}
+.side-link.active svg{color:#ff8dbb}
+.launch-main{background:linear-gradient(180deg,rgba(15,10,26,.14),rgba(11,11,25,.58))}
+.launch-welcome{
+  border-color:#ff9ac04d;
+  background:
+    linear-gradient(110deg,rgba(24,13,33,.91),rgba(35,18,43,.76) 52%,rgba(19,30,54,.88)),
+    radial-gradient(ellipse at 80% 12%,#ff5b9d4d,transparent 48%);
+  box-shadow:0 22px 80px #08051266,inset 0 1px #ffffff18;
+}
+.launch-welcome:after{
+  background:radial-gradient(circle,#ff6ca82b,transparent 68%);
+}
+.launch-eyebrow{color:#ff9bc5}
+.launch-welcome h1,.page-title{
+  text-shadow:0 5px 35px #ff5b9d22;
+  letter-spacing:-.065em;
+}
+.launch-gradient{
+  background:linear-gradient(100deg,#ffb36d 0%,#ff68a9 44%,#a8a0ff 78%,#69f4ff 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.launch-primary{
+  background:linear-gradient(105deg,#ff9b62,#ff5b9d 55%,#bd79ed);
+  color:#1b0c20;box-shadow:0 8px 26px #ff4f9d38;
+}
+.launch-primary:hover{filter:brightness(1.1);transform:translateY(-1px)}
+.launch-secondary{border-color:#ff9ac06b;background:#ffffff08}
+.visual-ring{border-color:#ff8dbb88}
+.ring-b{border-color:#69eaff66}
+.visual-v{
+  background:linear-gradient(145deg,#ffc078,#ff5b9d 52%,#8e7dff);
+  box-shadow:0 0 65px #ff5b9d66,0 0 110px #69eaff24;
+}
+.metric-card,.empty-launch-card,.steps-grid>div,.create-form,.launch-info-panel,.draft-card{
+  background:linear-gradient(145deg,rgba(34,19,42,.78),rgba(14,17,36,.82));
+  border-color:#ff9ac033;backdrop-filter:blur(12px);
+}
+.metric-card>span,.side-label{color:#d3a9c1}
+.text-action,.empty-icon,.steps-grid span,.draft-token{color:#ff91bd}
+.empty-icon,.draft-token{border-color:#ff8fbd70;background:#ff4fa312}
+.status-chip{color:#ffb3d1;border-color:#ff6ca866;background:#ff4fa310}
+.create-form input,.create-form textarea,.field-wrap{
+  background:rgba(10,9,23,.8);border-color:#ff9ac044;
+}
+.create-form input:focus,.create-form textarea:focus{border-color:#69f4ff}
+.launch-footer{border-top-color:#ff8cbd36;background:rgba(12,9,24,.55)}
+.account-shell{
+  background:
+    linear-gradient(180deg,rgba(18,9,27,.34),rgba(10,10,24,.86)),
+    radial-gradient(ellipse at 75% 10%,#ff659c55,transparent 38%),
+    linear-gradient(135deg,#53304f,#263b5c 68%,#101528);
+}
+.account-panel{
+  background:linear-gradient(145deg,rgba(43,22,47,.96),rgba(13,15,34,.96));
+  border-color:#ff9ac055;box-shadow:0 25px 100px #08051299;
+}
+.account-symbol{border-color:#ff83b8;color:#ff9bc5;box-shadow:0 0 26px #ff4fa344}
+.auth-top-button{border-color:#ff8fbd88;background:#ff4fa318;color:#ffd6e7}
+.auth-top-button:hover{background:#ff4fa32b;border-color:#ff9bc5}
+@media(max-width:680px){
+  .sidebar{background:linear-gradient(180deg,rgba(27,14,37,.98),rgba(12,13,28,.98));border-bottom-color:#ff8cbd40}
+  .launch-welcome{background:linear-gradient(145deg,rgba(36,17,43,.94),rgba(18,24,47,.94))}
+}

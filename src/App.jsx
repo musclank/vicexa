@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Activity, ArrowUpRight, Bell, ChevronDown, CircleHelp, Compass, Crown, ExternalLink, Flame, LayoutDashboard, LogOut, Plus, Radio, Rocket, Search, ShieldCheck, Sparkles, TrendingUp, Wallet, Wifi, X } from 'lucide-react'
+import { Activity, ArrowUpRight, Bell, BookOpen, ChevronDown, CircleHelp, Compass, Crown, ExternalLink, FileText, Flame, LayoutDashboard, Lock, LogOut, MessageCircle, Plus, Radio, Rocket, Search, ShieldCheck, Sparkles, TrendingUp, Wallet, Wifi, X } from 'lucide-react'
 import Auth from './components/Auth'
 import TokenFactory from './components/TokenFactory'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
@@ -16,7 +16,114 @@ const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'explore', label: 'Explore tokens', icon: Compass },
   { id: 'create', label: 'Create a token', icon: Plus },
+  { id: 'docs', label: 'Documentation', icon: BookOpen },
+  { id: 'terms', label: 'Terms of Service', icon: FileText },
+  { id: 'privacy', label: 'Privacy Policy', icon: Lock },
+  { id: 'risk', label: 'Risk Disclaimer', icon: ShieldCheck },
+  { id: 'faq', label: 'FAQ', icon: CircleHelp },
+  { id: 'support', label: 'Support', icon: MessageCircle },
 ]
+
+
+const infoPages = {
+  docs: {
+    eyebrow: 'VICEXA KNOWLEDGE BASE',
+    title: 'DOCUMENTATION',
+    intro: 'A practical guide to exploring tokens and preparing a token launch on Base with VICEXA.',
+    sections: [
+      { heading: '1. Getting started', paragraphs: ['VICEXA is a token launchpad interface for the Base Mainnet. You can browse confirmed token listings, prepare a token configuration, and review the available launch flow.'] , bullets: ['Use a compatible EVM wallet such as MetaMask or Coinbase Wallet.', 'Select Base Mainnet (Chain ID 8453) in your wallet when prompted.', 'Never share your seed phrase or private keys with anyone. VICEXA will never ask you to disclose them.'] },
+      { heading: '2. Connect your wallet', paragraphs: ['Select “Connect wallet” and approve the connection request in your wallet. The app requests your public wallet address and may ask you to switch to Base Mainnet. A wallet connection alone does not submit a transaction or deploy a token.'] },
+      { heading: '3. Explore tokens', paragraphs: ['The Explore Tokens directory displays launches that have been confirmed and indexed by VICEXA. Select a token to inspect its available details and use the BaseScan or Clanker links when provided to verify on-chain information. Listing status is not an endorsement of a token.'] },
+      { heading: '4. Prepare a token', paragraphs: ['Open “Create a token” and complete the fields shown in the token configuration flow. Review the token name, symbol, supply, decimals, fees, and any other transaction parameters presented by the interface before continuing. Available options may change as the integration evolves.'] },
+      { heading: '5. Review and authorize', paragraphs: ['Read the wallet confirmation screen carefully. Check the network, transaction destination, permissions, and estimated network fee. Only approve a transaction you understand. Blockchain transactions are generally irreversible once confirmed.'] },
+      { heading: '6. Drafts and launch status', paragraphs: ['A locally saved draft is only a convenience copy in the current browser. It is not a deployed token, does not reserve a token name or symbol, and may not appear on another device. A token should be treated as launched only after its deployment is confirmed on-chain.'] },
+      { heading: '7. Network and data', paragraphs: ['VICEXA is designed for Base Mainnet. Token listings depend on successful indexing and the availability of the configured services. Market metrics may be unavailable until a reliable data provider is connected; VICEXA will label unavailable metrics rather than invent values.'] }
+    ]
+  },
+  terms: {
+    eyebrow: 'LEGAL',
+    title: 'TERMS OF SERVICE',
+    intro: 'These terms govern your access to and use of the VICEXA website and related launchpad interfaces.',
+    sections: [
+      { heading: '1. Acceptance and updates', paragraphs: ['By accessing or using VICEXA, you agree to these Terms. If you do not agree, do not use the platform. We may update these Terms as the service changes; the revised version will be posted here with an updated date.'] },
+      { heading: '2. Platform description', paragraphs: ['VICEXA provides software interfaces for discovering token information and preparing token launch transactions on Base. Features may rely on third-party protocols, wallets, RPC providers, indexing services, and infrastructure that VICEXA does not control. Features may change, be interrupted, or become unavailable.'] },
+      { heading: '3. Eligibility and lawful use', paragraphs: ['You are responsible for ensuring that you are legally permitted to access the platform and use digital asset services in your jurisdiction. You must comply with applicable laws, regulations, sanctions, and third-party terms. Do not use VICEXA for fraud, market manipulation, unlawful activity, or infringement of another person’s rights.'] },
+      { heading: '4. Wallets and transactions', paragraphs: ['You control your wallet and private keys. VICEXA does not custody your assets or have the ability to reverse blockchain transactions. You are responsible for verifying transaction details, network fees, token parameters, and the destination address before signing. A displayed estimate or status may be delayed or inaccurate.'] },
+      { heading: '5. No financial, legal, or tax advice', paragraphs: ['Content on VICEXA is provided for general informational and technical purposes only. Nothing on the platform is an offer, solicitation, recommendation, or personalized advice to buy, sell, or hold any asset. Obtain independent professional advice where appropriate.'] },
+      { heading: '6. Third-party services', paragraphs: ['The platform may link to or integrate with third-party products and protocols, including wallet providers, Base, BaseScan, and Clanker. Those services are governed by their own terms and policies. VICEXA is not responsible for third-party services, smart contracts, or their availability.'] },
+      { heading: '7. Disclaimers and limitation', paragraphs: ['The platform is provided “as is” and “as available”, to the extent permitted by law. We do not guarantee uninterrupted access, error-free operation, token performance, liquidity, security, or the accuracy and completeness of third-party data. To the maximum extent permitted by applicable law, VICEXA disclaims liability for indirect or consequential loss arising from use of the platform. Nothing in these Terms excludes liability that cannot lawfully be excluded.'] },
+      { heading: '8. Suspension and contact', paragraphs: ['We may restrict access where reasonably necessary to protect the platform, users, or comply with law. For questions about these Terms, contact the VICEXA team through the Support page and the project’s public GitHub issue tracker.'] }
+    ]
+  },
+  privacy: {
+    eyebrow: 'LEGAL',
+    title: 'PRIVACY POLICY',
+    intro: 'This policy explains the types of information that may be processed when you use VICEXA. The final practices depend on the services and configuration active on the deployed site.',
+    sections: [
+      { heading: '1. Information you provide', paragraphs: ['If you create an account or contact support, information you submit may include an email address, profile details, and the contents of your message. Do not submit passwords, seed phrases, private keys, or sensitive personal information.'] },
+      { heading: '2. Wallet and public blockchain data', paragraphs: ['If you connect a wallet, the public wallet address may be processed to establish the connection and prepare transactions. Wallet addresses and blockchain transactions are public by design and may be visible on public explorers. VICEXA cannot make public blockchain activity private.'] },
+      { heading: '3. Local browser storage', paragraphs: ['Some draft information may be stored in your browser using local storage so it remains available on that browser. Clearing browser data or changing devices may remove access to those drafts. Do not use local drafts as your only record of important information.'] },
+      { heading: '4. Service providers', paragraphs: ['VICEXA may rely on configured infrastructure providers for authentication, database hosting, blockchain RPC access, token indexing, and deployment. Information processed by those providers is subject to their own privacy terms and the configuration selected by the platform operator.'] },
+      { heading: '5. Use and retention', paragraphs: ['Information may be used to operate the platform, provide account features, display token listings, respond to support requests, maintain security, and meet legal obligations. Retention periods depend on the data type and the provider settings.'] },
+      { heading: '6. Your choices and security', paragraphs: ['You can disconnect your wallet through your wallet provider and sign out of your VICEXA account where that feature is available. You can clear locally stored drafts through your browser settings. No internet-connected service can guarantee absolute security; protect your devices and credentials.'] },
+      { heading: '7. Changes and contact', paragraphs: ['This policy may be updated when VICEXA features or service providers change. For privacy questions or requests, contact the VICEXA team through the Support page. Applicable privacy rights may vary by your location.'] }
+    ]
+  },
+  risk: {
+    eyebrow: 'IMPORTANT INFORMATION',
+    title: 'RISK DISCLAIMER',
+    intro: 'Digital assets and blockchain transactions involve substantial risk. Read this notice before using token discovery or launch features.',
+    sections: [
+      { heading: 'No investment advice', paragraphs: ['VICEXA does not provide investment, financial, legal, or tax advice. Token listings, creator information, interface labels, and educational content are not recommendations or endorsements. You are solely responsible for your decisions.'] },
+      { heading: 'Token and market risks', bullets: ['A token may lose some or all of its value.', 'A token may have little or no liquidity, and you may be unable to sell it.', 'Token creators, metadata, supply, ownership, and project claims may be incomplete or misleading.', 'Smart contracts may contain vulnerabilities, malicious functions, or unexpected behavior.', 'Market prices and third-party data can be delayed, inaccurate, manipulated, or unavailable.'] },
+      { heading: 'Blockchain and wallet risks', bullets: ['Transactions are generally irreversible after confirmation.', 'Sending assets to the wrong address or using the wrong network may result in permanent loss.', 'Network congestion, fees, outages, wallet errors, and protocol changes may affect transactions.', 'Never disclose your seed phrase or private keys and carefully inspect every wallet signature.'] },
+      { heading: 'Independent verification', paragraphs: ['Before interacting with a token, verify its contract address, deployment transaction, contract behavior, creator claims, and liquidity using independent sources. A “confirmed” or “listed” status only describes the platform’s indexing state; it does not mean that a token is safe, audited, legitimate, or suitable for you.'] },
+      { heading: 'Use at your own risk', paragraphs: ['Only interact with digital assets if you understand the risks and can afford a total loss. Consider seeking independent professional advice. Use of VICEXA is at your own risk, subject to applicable law.'] }
+    ]
+  },
+  faq: {
+    eyebrow: 'HELP CENTER',
+    title: 'FREQUENTLY ASKED QUESTIONS',
+    intro: 'Quick answers about wallets, token listings, drafts, and the VICEXA launch flow.',
+    sections: [
+      { heading: 'Which network does VICEXA support?', paragraphs: ['VICEXA is configured for Base Mainnet, Chain ID 8453. Check that your wallet is on the correct network before signing a transaction.'] },
+      { heading: 'Does connecting a wallet deploy a token?', paragraphs: ['No. Connecting a wallet only establishes a wallet connection. A deployment requires a separate transaction that you must review and approve in your wallet.'] },
+      { heading: 'Why does Explore show no tokens?', paragraphs: ['The directory lists confirmed and indexed launches. If no qualifying launch has been indexed, the page will show an empty state. Indexing may take time after an on-chain transaction.'] },
+      { heading: 'Are saved drafts deployed on Base?', paragraphs: ['No. Browser-saved drafts are local configuration notes. They do not create a contract, reserve a ticker, or submit a blockchain transaction.'] },
+      { heading: 'Why are market cap or volume unavailable?', paragraphs: ['Those metrics require a verified market-data source. VICEXA may show a pending state until a reliable feed is configured; do not interpret pending data as zero.'] },
+      { heading: 'Can a confirmed token be considered safe?', paragraphs: ['No. Confirmation means the listing has met the platform’s indexing criteria. It is not an audit, endorsement, or guarantee of safety, liquidity, or value.'] },
+      { heading: 'What if a transaction fails?', paragraphs: ['Check your wallet network, available balance for network fees, and the transaction status on BaseScan. Do not repeatedly sign transactions you do not understand. If the issue persists, send the public transaction hash and a description through Support. Never send private keys or recovery phrases.'] }
+    ]
+  },
+  support: {
+    eyebrow: 'VICEXA SUPPORT',
+    title: 'HOW CAN WE HELP?',
+    intro: 'For help with the interface, report a bug, or suggest an improvement. Never include private keys, recovery phrases, passwords, or other secrets in a support request.',
+    sections: [
+      { heading: 'Report a bug or request a feature', paragraphs: ['Use the public VICEXA GitHub issue tracker to report reproducible bugs and request improvements. Include the page, steps to reproduce, expected behavior, actual behavior, and screenshots with personal information removed.'] },
+      { heading: 'Transaction support', paragraphs: ['For a transaction-related report, include the public transaction hash and the wallet/network involved. Transaction hashes and wallet addresses are public blockchain information. Do not share a seed phrase or private key.'] },
+      { heading: 'Before contacting support', bullets: ['Confirm your wallet is connected to Base Mainnet (Chain ID 8453).', 'Refresh the page and check whether the issue can be reproduced.', 'Check the transaction on BaseScan if you already submitted it.', 'Remove personal or confidential information from screenshots and logs.'] }
+    ]
+  }
+}
+
+function InfoPage({ page }) {
+  return <section className="page-section info-page">
+    <div className="launch-eyebrow"><span/> {page.eyebrow}</div>
+    <h1 className="page-title info-title">{page.title}</h1>
+    <p className="page-lead">{page.intro}</p>
+    <div className="info-meta">LAST UPDATED: NOVEMBER 20, 2026 <span>·</span> VICEXA</div>
+    <div className="info-sections">
+      {page.sections.map((section, index) => <article className="info-card" key={section.heading}>
+        <h2>{section.heading}</h2>
+        {section.paragraphs?.map((paragraph, i) => <p key={i}>{paragraph}</p>)}
+        {section.bullets && <ul>{section.bullets.map((item, i) => <li key={i}>{item}</li>)}</ul>}
+      </article>)}
+    </div>
+    {page.title === 'HOW CAN WE HELP?' && <a className="launch-primary support-link" href="https://github.com/musclank/vicexa/issues" target="_blank" rel="noreferrer">Open VICEXA support on GitHub <ArrowUpRight size={15}/></a>}
+    <p className="info-note">These pages are general platform information and are not a substitute for legal advice. Have the terms and privacy practices reviewed for the jurisdictions and services in which VICEXA operates before public commercial use.</p>
+  </section>
+}
 
 function App() {
   const [session, setSession] = useState(null)
@@ -227,9 +334,10 @@ function App() {
           </section>}
 
           {active === 'create' && <TokenFactory account={account} onSaveDraft={saveTokenDraft} session={session}/>}
+          {infoPages[active] && <InfoPage page={infoPages[active]} />}
 
         </div>
-        <footer className="launch-footer"><span>© {new Date().getFullYear()} VICEXA</span><span>POWERED BY BASE MAINNET <span className="footer-dot">·</span> BUILT FOR WHAT'S NEXT</span><a href="https://basescan.org/" target="_blank" rel="noreferrer">BASESCAN <ExternalLink size={12}/></a></footer>
+        <footer className="launch-footer"><span>© {new Date().getFullYear()} VICEXA</span><span className="footer-links">{['docs','terms','privacy','risk','faq','support'].map(id => <button key={id} onClick={() => { setActive(id); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>{navItems.find(item => item.id === id).label}</button>)}</span><span>POWERED BY BASE MAINNET</span><a href="https://basescan.org/" target="_blank" rel="noreferrer">BASESCAN <ExternalLink size={12}/></a></footer>
       </section>
     </main>
   )

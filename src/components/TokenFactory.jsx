@@ -35,10 +35,10 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
       const metadata = { description: form.description.trim(), socialMediaUrls: [ ...(form.website ? [{ platform: 'website', url: form.website.trim() }] : []), ...(form.x ? [{ platform: 'x', url: form.x.trim() }] : []), ...(form.telegram ? [{ platform: 'telegram', url: form.telegram.trim() }] : []) ] }
       const deployment = await clanker.deploy({ name: v.name, symbol: v.symbol, ...(form.image.trim() ? { image: form.image.trim() } : {}), metadata, buyFee: v.buyFee, sellFee: v.sellFee, context: { interface: 'VICEXA', platform: 'VICEXA Launchpad' } })
       if (deployment.error) throw deployment.error
-      sentTxHash = deployment.txHash; setTxHash(sentTxHash); setLaunchStatus('TRANSACTION SUBMITTED'); await updateServerRecord(launchId, { status: 'submitted', txHash: sentTxHash })
+      sentTxHash = deployment.txHash; setTxHash(sentTxHash); setLaunchStatus('TRANSACTION SUBMITTED'); await updateServerRecord(launchId, { status: 'submitted', txHash: sentTxHash, expectedAddress: deployment.expectedAddress })
       const receipt = await deployment.waitForTransaction()
       if (receipt.error) { await updateServerRecord(launchId, { status: 'failed', txHash: sentTxHash, message: receipt.error.message }); throw receipt.error }
-      setTokenAddress(receipt.address); setLaunchStatus('CONFIRMED'); await updateServerRecord(launchId, { status: 'confirmed', txHash: sentTxHash, tokenAddress: receipt.address })
+      setTokenAddress(receipt.address); setLaunchStatus('CONFIRMED'); await updateServerRecord(launchId, { status: 'confirmed', txHash: sentTxHash, expectedAddress: deployment.expectedAddress, tokenAddress: receipt.address })
     } catch (e) {
       const message = e?.shortMessage || e?.message || 'Clanker V5 deployment failed.'
       if (launchId && !sentTxHash && e?.data?.rawName !== 'SEND_UNCERTAIN') { try { await updateServerRecord(launchId, { status: 'failed', message }) } catch {} }

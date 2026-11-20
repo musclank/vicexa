@@ -307,3 +307,21 @@ body{
   .info-card p,.info-card li{font-size:10px}
   .footer-links{width:100%;justify-content:flex-start;gap:12px}
 }
+
+
+/* Match the sidebar VICEXA wordmark to the hero GTA-inspired lettering */
+.brand-wordmark{
+  display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  color:#fff5f8;font-family:Impact,'Arial Black',system-ui,sans-serif;
+  font-size:25px;font-weight:1000;font-style:italic;letter-spacing:-.075em;
+  line-height:.86;white-space:nowrap;
+  -webkit-text-stroke:.65px #28112f;
+  text-shadow:1.5px 2px 0 #24102f,3px 3.5px 0 #e52c91,0 0 12px #ff4fa3aa;
+  transform:skew(-7deg) rotate(-2deg);filter:drop-shadow(0 3px 7px #07051299);
+}
+.brand-wordmark small{
+  color:#69f4ff;font:7px 'DM Mono',monospace;font-style:normal;
+  letter-spacing:.22em;-webkit-text-stroke:0;text-shadow:0 0 8px #69f4ff88;
+  transform:skew(7deg);
+}
+@media(max-width:680px){.brand-wordmark{font-size:22px}.brand-wordmark small{font-size:6px}}

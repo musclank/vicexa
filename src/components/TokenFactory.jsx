@@ -7,6 +7,52 @@ const initialForm = { name: '', symbol: '', image: '', description: '', website:
 export default function TokenFactory({ account, session }) {
   const [form, setForm] = useState(initialForm); const [error, setError] = useState(''); const [txBusy, setTxBusy] = useState(false); const [txHash, setTxHash] = useState(''); const [tokenAddress, setTokenAddress] = useState(''); const [launchStatus, setLaunchStatus] = useState(''); const [launchRecordId, setLaunchRecordId] = useState(''); const [expectedTokenAddress, setExpectedTokenAddress] = useState('')
   const update = (key, value) => { setError(''); setForm(current => ({ ...current, [key]: value })) }
+  async function updateServerRecord(id, payload) {
+    if (!id || !session?.access_token) throw new Error('Missing launch record or sign-in session.')
+    const response = await fetch('/api/launch-intents', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token },
+      body: JSON.stringify({ id, ...payload }),
+    })
+    const result = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(result.error || 'Could not update the launch record.')
+    return result
+  }
+
+  async function retryVerification() {
+    if (!txHash || !expectedTokenAddress || !launchRecordId) {
+      setError('This launch is missing its transaction details. Check your wallet activity and BaseScan before taking any further action.')
+      return
+    }
+    setError('')
+    setTxBusy(true)
+    setLaunchStatus('VERIFYING TRANSACTION')
+    try {
+      const publicClient = createPublicClient({ chain: base, transport: http(import.meta.env.VITE_BASE_RPC_URL || 'https://mainnet.base.org') })
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash, timeout: 120000 })
+      if (receipt.status !== 'success') {
+        setLaunchStatus('TRANSACTION FAILED')
+        await updateServerRecord(launchRecordId, { status: 'failed', message: 'The Base transaction receipt reports failure.' })
+        throw new Error('The transaction failed on Base. No token was confirmed.')
+      }
+      const deployedAddress = getAddress(expectedTokenAddress)
+      await updateServerRecord(launchRecordId, {
+        status: 'confirmed',
+        txHash,
+        expectedAddress: deployedAddress,
+        tokenAddress: deployedAddress,
+      })
+      setTokenAddress(deployedAddress)
+      setLaunchStatus('CONFIRMED')
+      setError('')
+    } catch (e) {
+      if (launchStatus !== 'TRANSACTION FAILED') setLaunchStatus('CONFIRMATION PENDING')
+      setError(e?.shortMessage || e?.message || 'Could not verify the transaction yet. Do not launch again; check BaseScan and retry verification.')
+    } finally {
+      setTxBusy(false)
+    }
+  }
+
   const validate = () => {
     const name = form.name.trim(); const symbol = form.symbol.trim().toUpperCase(); const buyFee = Number(form.buyFee); const sellFee = Number(form.sellFee)
     if (!name || name.length > 64) throw new Error('Token name must contain 1–64 characters.')
@@ -88,7 +134,7 @@ export default function TokenFactory({ account, session }) {
       <div className="factory-field-grid"><label>BUY TAX<select value={form.buyFee} onChange={e => update('buyFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label><label>SELL TAX<select value={form.sellFee} onChange={e => update('sellFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label></div>
       {error && <div className="factory-error" role="alert"><CircleAlert size={15}/>{error}</div>}{txHash && expectedTokenAddress && launchRecordId && launchStatus !== 'CONFIRMED' && <button className="launch-primary submit-draft" type="button" onClick={retryVerification} disabled={txBusy}> {txBusy ? 'VERIFYING…' : 'Retry transaction verification'} </button>}{launchStatus && <div className="factory-tx-link">LAUNCH STATUS: {launchStatus}</div>}
       {tokenAddress && <div className="factory-saved launch-success-panel" role="status"><Check size={15}/> Token successfully confirmed on Base: <a href={tokenUrl} target="_blank" rel="noreferrer">{tokenAddress.slice(0,8)}…{tokenAddress.slice(-6)} <ExternalLink size={12}/></a> · <a href={'https://www.clanker.world/clanker/' + tokenAddress} target="_blank" rel="noreferrer">Clanker <ExternalLink size={12}/></a></div>}{txUrl && <div className="factory-tx-link">Transaction: <a href={txUrl} target="_blank" rel="noreferrer">{txHash.slice(0,10)}…{txHash.slice(-6)} <ExternalLink size={12}/></a></div>}
-      <button className="launch-primary submit-draft factory-deploy-button" type="button" onClick={createToken} disabled={txBusy || !account || !session}>{txBusy ? <><LoaderCircle size={16} className="factory-spinner"/> LAUNCHING…</> : <>Launch on Base Mainnet <ArrowRight size={16}/></>}</button>
+      <button className="launch-primary submit-draft factory-deploy-button" type="button" onClick={createToken} disabled={txBusy || !account || !session || Boolean(txHash && launchStatus !== 'CONFIRMED')}>{txBusy ? <><LoaderCircle size={16} className="factory-spinner"/> LAUNCHING…</> : <>Launch on Base Mainnet <ArrowRight size={16}/></>}</button>
       <p className="form-disclaimer">Mainnet launch uses real ETH for gas. Review the token configuration and every wallet prompt before approving. Clanker V5 has a fixed protocol-controlled supply and live factory policies.</p>
     </form><aside className="factory-side"><div className="token-preview"><div className="token-preview-top"><span>LIVE PREVIEW</span><Coins size={17}/></div><div className="token-coin">{symbol.slice(0,1) || 'V'}</div><h2>{form.name.trim() || 'Your Token'}</h2><div className="token-symbol">{symbol ? '$' + symbol : '$SYMBOL'}</div><div className="token-supply"><span>BUY / SELL TAX</span><b>{form.buyFee}% / {form.sellFee}%</b></div><div className="token-supply"><span>NETWORK</span><b>BASE · 8453</b></div><div className="token-network"><i/> CLANKER V5 · MAINNET</div></div>
       <div className="factory-status-panel"><ShieldCheck size={21}/><b>Wallet-signed Clanker V5 launch</b><p>VICEXA prepares and records the launch. Clanker SDK submits the V5 deployment through your connected wallet. VICEXA never handles your private key.</p><div className="factory-status-tag">BASE MAINNET · REAL TRANSACTION</div></div><div className="factory-wallet-panel"><Wallet size={17}/><div><b>{account ? 'Wallet connected' : 'Wallet not connected'}</b><small>{account ? account.slice(0,6) + '…' + account.slice(-4) : 'Connect a Base-compatible wallet from the top bar.'}</small></div></div>{!session && <div className="factory-error">Sign in to VICEXA to create a tracked launch.</div>}

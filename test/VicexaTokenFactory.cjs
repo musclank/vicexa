@@ -13,7 +13,7 @@ describe("VICEXA Token Factory", function () {
     const [creator, recipient] = await ethers.getSigners();
     const factory = await deployFactory();
     const supply = 1_000_000n;
-    const decimals = 18;
+    const decimals = 18n;
 
     const tx = await factory.createToken("Frontier Token", "FRONT", supply, decimals);
     const receipt = await tx.wait();
@@ -31,7 +31,7 @@ describe("VICEXA Token Factory", function () {
     const token = await ethers.getContractAt("VicexaToken", event.args.token);
     expect(await token.name()).to.equal("Frontier Token");
     expect(await token.symbol()).to.equal("FRONT");
-    expect(await token.decimals()).to.equal(18);
+    expect(await token.decimals()).to.equal(18n);
     expect(await token.totalSupply()).to.equal(supply * 10n ** 18n);
     expect(await token.balanceOf(creator.address)).to.equal(supply * 10n ** 18n);
     expect(await token.balanceOf(recipient.address)).to.equal(0n);
@@ -47,7 +47,7 @@ describe("VICEXA Token Factory", function () {
     }).find(parsed => parsed && parsed.name === "TokenCreated");
     const token = await ethers.getContractAt("VicexaToken", event.args.token);
 
-    expect(await token.decimals()).to.equal(6);
+    expect(await token.decimals()).to.equal(6n);
     expect(await token.totalSupply()).to.equal(2500n * 10n ** 6n);
     await token.transfer(recipient.address, 100n * 10n ** 6n);
     expect(await token.balanceOf(recipient.address)).to.equal(100n * 10n ** 6n);

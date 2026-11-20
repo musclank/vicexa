@@ -4,13 +4,13 @@ import Auth from './components/Auth'
 import TokenFactory from './components/TokenFactory'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
-const BASE_CHAIN_ID = '0x2105'
+const BASE_CHAIN_ID = '0x14a34'
 const BASE_PARAMS = {
   chainId: BASE_CHAIN_ID,
-  chainName: 'Base',
+  chainName: 'Base Sepolia',
   nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-  rpcUrls: ['https://mainnet.base.org'],
-  blockExplorerUrls: ['https://basescan.org'],
+  rpcUrls: ['https://sepolia.base.org'],
+  blockExplorerUrls: ['https://sepolia.basescan.org'],
 }
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -66,7 +66,7 @@ function App() {
         await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [BASE_PARAMS] })
       }
       const chainId = await window.ethereum.request({ method: 'eth_chainId' })
-      if (chainId !== BASE_CHAIN_ID) throw new Error('Please switch your wallet to Base Mainnet.')
+      if (chainId !== BASE_CHAIN_ID) throw new Error('Please switch your wallet to Base Sepolia.')
       setAccount(accounts?.[0] || '')
     } catch (error) {
       setWalletError(error.message || 'Wallet connection was cancelled.')
@@ -106,7 +106,7 @@ function App() {
     <main className="launch-app">
       <aside className="sidebar">
         <a className="launch-brand" href="#" onClick={e => { e.preventDefault(); setActive('overview') }}><span className="brand-mark">V</span><span>VICEXA<small>LAUNCHPAD</small></span></a>
-        <div className="network-pill"><span/> BASE MAINNET <ChevronDown size={13}/></div>
+        <div className="network-pill"><span/> BASE SEPOLIA <ChevronDown size={13}/></div>
         <div className="side-label">WORKSPACE</div>
         <nav className="side-nav">
           {navItems.map(({ id, label, icon: Icon }) => <button key={id} className={active === id ? 'side-link active' : 'side-link'} onClick={() => { setActive(id); setNotice('') }}><Icon size={17}/>{label}{id === 'create' && <span className="side-plus">+</span>}</button>)}
@@ -120,7 +120,7 @@ function App() {
       <section className="launch-main">
         <header className="launch-topbar">
           <div className="breadcrumb">VICEXA <span>/</span> {navItems.find(item => item.id === active)?.label.toUpperCase()}</div>
-          <div className="top-actions"><span className="top-network"><i/> BASE</span><button className="icon-button" aria-label="Notifications"><Bell size={17}/></button><button className="auth-top-button" onClick={() => session ? signOut() : setAuthOpen(true)}>{session ? 'Sign out' : 'Sign in'}</button><button className="wallet-button" onClick={connectWallet} disabled={walletBusy}><Wallet size={16}/>{walletBusy ? 'CONNECTING…' : shortAddress || 'Connect wallet'}</button></div>
+          <div className="top-actions"><span className="top-network"><i/> BASE SEPOLIA</span><button className="icon-button" aria-label="Notifications"><Bell size={17}/></button><button className="auth-top-button" onClick={() => session ? signOut() : setAuthOpen(true)}>{session ? 'Sign out' : 'Sign in'}</button><button className="wallet-button" onClick={connectWallet} disabled={walletBusy}><Wallet size={16}/>{walletBusy ? 'CONNECTING…' : shortAddress || 'Connect wallet'}</button></div>
         </header>
 
         <div className="launch-content">

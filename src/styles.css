@@ -172,3 +172,14 @@ body{
 @media(max-width:680px){
   body{background-position:58% top;background-attachment:scroll}
 }
+
+
+/* VICEXA duo character menu avatar */
+.brand-mark-duo{
+  width:42px;height:42px;flex:0 0 42px;overflow:hidden;border:1px solid #ff73bd;
+  border-radius:50%;transform:none;padding:0;background:#211332;
+  box-shadow:0 0 18px #ff4fa366,0 0 26px #69f4ff28;
+}
+.brand-mark-duo img{display:block;width:100%;height:100%;object-fit:cover}
+.launch-brand{gap:12px}
+@media(max-width:680px){.brand-mark-duo{width:36px;height:36px;flex-basis:36px}}

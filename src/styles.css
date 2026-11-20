@@ -279,3 +279,31 @@ body{
  .network-banner{align-items:flex-start;flex-direction:column;padding:17px}.network-banner>div:first-child>b{font-size:15px}
  .creator-row{gap:9px;padding:13px}.creator-address{font-size:9px}
 }
+
+
+/* Documentation, legal, FAQ and support pages */
+.info-page{max-width:900px;margin:0 auto;padding-top:8px}
+.info-title{font-size:clamp(42px,6vw,70px);line-height:1.02;letter-spacing:-.06em;margin:24px 0 14px}
+.info-page .page-lead{max-width:760px;font-size:13px;line-height:1.85}
+.info-meta{font:9px 'DM Mono';letter-spacing:.12em;color:#ffabc9;border-top:1px solid #ff8cbd40;border-bottom:1px solid #ff8cbd40;padding:13px 0;margin:25px 0 18px}
+.info-meta span{padding:0 8px;color:#69f4ff}
+.info-sections{display:grid;gap:11px}
+.info-card{border:1px solid #ffffff25;background:linear-gradient(120deg,rgba(28,17,39,.82),rgba(15,17,34,.78));padding:22px 24px;box-shadow:0 12px 35px #08051224}
+.info-card h2{font-size:15px;letter-spacing:-.02em;color:#fff;margin:0 0 12px}
+.info-card p,.info-card li{font-size:11px;line-height:1.9;color:#c4bdcc}
+.info-card p{margin:8px 0}
+.info-card ul{padding-left:19px;margin:10px 0}
+.info-card li{padding:3px 0}
+.info-note{margin-top:22px;border-left:2px solid #ff8cbd;padding:10px 14px;color:#9c91a6;font-size:10px;line-height:1.8}
+.support-link{display:inline-flex;margin-top:22px}
+.footer-links{display:flex;gap:13px;flex-wrap:wrap;justify-content:center}
+.footer-links button{border:0;background:transparent;padding:0;color:#b8a9bd;font:8px 'DM Mono';letter-spacing:.06em}
+.footer-links button:hover{color:#69f4ff}
+@media(max-width:680px){
+  .info-page{padding-top:4px}
+  .info-title{font-size:clamp(38px,11vw,55px)}
+  .info-card{padding:17px}
+  .info-card h2{font-size:14px}
+  .info-card p,.info-card li{font-size:10px}
+  .footer-links{width:100%;justify-content:flex-start;gap:12px}
+}

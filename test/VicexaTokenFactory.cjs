@@ -40,10 +40,8 @@ describe("VICEXA Token Factory", function () {
   it("supports custom decimals and transfers", async function () {
     const [creator, recipient] = await ethers.getSigners();
     const factory = await deployFactory();
-    await factory.createToken("Unit Token", "UNIT", 2500, 6);
-    const receipt = await ethers.provider.getTransactionReceipt(
-      (await ethers.provider.getBlock("latest")).transactions[0]
-    );
+    const tx = await factory.createToken("Unit Token", "UNIT", 2500, 6);
+    const receipt = await tx.wait();
     const event = receipt.logs.map(log => {
       try { return factory.interface.parseLog(log); } catch { return null; }
     }).find(parsed => parsed && parsed.name === "TokenCreated");

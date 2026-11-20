@@ -37,7 +37,7 @@ export default function TokenFactory({ account, onSaveDraft }) {
       setError('Enter a token name and a symbol containing 2–10 letters or numbers.')
       return
     }
-    if (!Number.isFinite(supply) || supply <= 0 || !/^\\d+(\\.\\d+)?$/.test(form.supply.trim())) {
+    if (!Number.isFinite(supply) || supply <= 0 || !/^\d+(\.\d+)?$/.test(form.supply.trim())) {
       setError('Enter a valid total supply greater than zero.')
       return
     }

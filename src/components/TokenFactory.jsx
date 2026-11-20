@@ -4,9 +4,9 @@ import { base } from 'viem/chains'
 import { Clanker, SEND_UNCERTAIN } from 'clanker-sdk/v5'
 import { ArrowRight, Check, CircleAlert, Coins, ExternalLink, ShieldCheck, Wallet, LoaderCircle } from 'lucide-react'
 const initialForm = { name: '', symbol: '', image: '', description: '', website: '', x: '', telegram: '', buyFee: '1', sellFee: '1' }
-export default function TokenFactory({ account, onSaveDraft, session }) {
-  const [form, setForm] = useState(initialForm); const [saved, setSaved] = useState(false); const [error, setError] = useState(''); const [txBusy, setTxBusy] = useState(false); const [txHash, setTxHash] = useState(''); const [tokenAddress, setTokenAddress] = useState(''); const [launchStatus, setLaunchStatus] = useState(''); const [launchRecordId, setLaunchRecordId] = useState(''); const [expectedTokenAddress, setExpectedTokenAddress] = useState('')
-  const update = (key, value) => { setSaved(false); setError(''); setForm(current => ({ ...current, [key]: value })) }
+export default function TokenFactory({ account, session }) {
+  const [form, setForm] = useState(initialForm); const [error, setError] = useState(''); const [txBusy, setTxBusy] = useState(false); const [txHash, setTxHash] = useState(''); const [tokenAddress, setTokenAddress] = useState(''); const [launchStatus, setLaunchStatus] = useState(''); const [launchRecordId, setLaunchRecordId] = useState(''); const [expectedTokenAddress, setExpectedTokenAddress] = useState('')
+  const update = (key, value) => { setError(''); setForm(current => ({ ...current, [key]: value })) }
   const validate = () => {
     const name = form.name.trim(); const symbol = form.symbol.trim().toUpperCase(); const buyFee = Number(form.buyFee); const sellFee = Number(form.sellFee)
     if (!name || name.length > 64) throw new Error('Token name must contain 1–64 characters.')
@@ -27,19 +27,6 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
     validateLink(form.telegram, 'Telegram')
     if (form.description.length > 500) throw new Error('Description must be 500 characters or fewer.')
     return { name, symbol, buyFee, sellFee }
-  }
-  function saveDraft(event) { event.preventDefault(); try { const v = validate(); onSaveDraft({ name: v.name, ticker: v.symbol, image: form.image.trim(), description: form.description.trim(), website: form.website.trim(), x: form.x.trim(), telegram: form.telegram.trim(), buyFee: v.buyFee, sellFee: v.sellFee, type: 'clanker-v5', status: 'draft' }); setSaved(true); setError('') } catch (e) { setError(e.message) } }
-  async function updateServerRecord(id, payload) { const response = await fetch('/api/launch-intents', { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ id, ...payload }) }); if (!response.ok) throw new Error('The on-chain action finished, but VICEXA could not update its launch record. Check the transaction before retrying.') }
-  async function retryVerification() {
-    if (!launchRecordId || !txHash || !expectedTokenAddress || !session?.access_token) return
-    setTxBusy(true); setError(''); setLaunchStatus('RETRYING VERIFICATION')
-    try {
-      await updateServerRecord(launchRecordId, { status: 'confirmed', txHash, expectedAddress: expectedTokenAddress, tokenAddress: expectedTokenAddress })
-      setTokenAddress(expectedTokenAddress); setLaunchStatus('CONFIRMED')
-    } catch (e) {
-      setLaunchStatus('CONFIRMATION PENDING')
-      setError(e.message || 'Verification is still pending. Do not submit another launch.')
-    } finally { setTxBusy(false) }
   }
   async function createToken() {
     setError(''); setTxHash(''); setTokenAddress(''); setLaunchStatus(''); setLaunchRecordId(''); setExpectedTokenAddress('')
@@ -89,7 +76,7 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
   const symbol = form.symbol.trim().toUpperCase(); const txUrl = txHash ? 'https://basescan.org/tx/' + txHash : ''; const tokenUrl = tokenAddress ? 'https://basescan.org/token/' + tokenAddress : ''
   return <section className="page-section token-factory-page">
     <div className="launch-eyebrow"><span/> CLANKER V5 · BASE MAINNET</div><h1 className="page-title">CREATE YOUR<br/><span className="launch-gradient">TOKEN.</span></h1><p className="page-lead">Launch a Clanker V5 token on Base. Your wallet approves the transaction; VICEXA records the launch.</p>
-    <div className="factory-layout"><form className="create-form factory-form" onSubmit={saveDraft}>
+    <div className="factory-layout"><form className="create-form factory-form" onSubmit={event => event.preventDefault()}>
       <div className="form-heading"><b>Token configuration</b><span>STEP 01 / 02</span></div>
       <label>TOKEN NAME<input required maxLength={64} placeholder="e.g. Frontier Token" value={form.name} onChange={e => update('name', e.target.value)}/></label>
       <label>TOKEN SYMBOL<input required maxLength={16} placeholder="e.g. FRONT" value={form.symbol} onChange={e => update('symbol', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}/><small>2–16 uppercase letters or numbers.</small></label>
@@ -99,9 +86,9 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
       <label>X PROFILE <span className="optional">OPTIONAL</span><input type="url" placeholder="https://x.com/yourproject" value={form.x} onChange={e => update('x', e.target.value)}/></label>
       <label>TELEGRAM <span className="optional">OPTIONAL</span><input type="url" placeholder="https://t.me/yourproject" value={form.telegram} onChange={e => update('telegram', e.target.value)}/></label>
       <div className="factory-field-grid"><label>BUY TAX<select value={form.buyFee} onChange={e => update('buyFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label><label>SELL TAX<select value={form.sellFee} onChange={e => update('sellFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label></div>
-      {error && <div className="factory-error" role="alert"><CircleAlert size={15}/>{error}</div>}{txHash && expectedTokenAddress && launchRecordId && launchStatus !== 'CONFIRMED' && <button className="launch-primary submit-draft" type="button" onClick={retryVerification} disabled={txBusy}> {txBusy ? 'VERIFYING…' : 'Retry transaction verification'} </button>}{saved && <div className="factory-saved" role="status"><Check size={15}/> Token configuration saved as a local draft.</div>}{launchStatus && <div className="factory-tx-link">LAUNCH STATUS: {launchStatus}</div>}
+      {error && <div className="factory-error" role="alert"><CircleAlert size={15}/>{error}</div>}{txHash && expectedTokenAddress && launchRecordId && launchStatus !== 'CONFIRMED' && <button className="launch-primary submit-draft" type="button" onClick={retryVerification} disabled={txBusy}> {txBusy ? 'VERIFYING…' : 'Retry transaction verification'} </button>}{launchStatus && <div className="factory-tx-link">LAUNCH STATUS: {launchStatus}</div>}
       {tokenAddress && <div className="factory-saved launch-success-panel" role="status"><Check size={15}/> Token successfully confirmed on Base: <a href={tokenUrl} target="_blank" rel="noreferrer">{tokenAddress.slice(0,8)}…{tokenAddress.slice(-6)} <ExternalLink size={12}/></a> · <a href={'https://www.clanker.world/clanker/' + tokenAddress} target="_blank" rel="noreferrer">Clanker <ExternalLink size={12}/></a></div>}{txUrl && <div className="factory-tx-link">Transaction: <a href={txUrl} target="_blank" rel="noreferrer">{txHash.slice(0,10)}…{txHash.slice(-6)} <ExternalLink size={12}/></a></div>}
-      <button className="launch-primary submit-draft" type="submit">Save token draft <ArrowRight size={16}/></button><button className="launch-primary submit-draft factory-deploy-button" type="button" onClick={createToken} disabled={txBusy || !account || !session}>{txBusy ? <><LoaderCircle size={16} className="factory-spinner"/> LAUNCHING…</> : <>Launch on Base Mainnet <ArrowRight size={16}/></>}</button>
+      <button className="launch-primary submit-draft factory-deploy-button" type="button" onClick={createToken} disabled={txBusy || !account || !session}>{txBusy ? <><LoaderCircle size={16} className="factory-spinner"/> LAUNCHING…</> : <>Launch on Base Mainnet <ArrowRight size={16}/></>}</button>
       <p className="form-disclaimer">Mainnet launch uses real ETH for gas. Review the token configuration and every wallet prompt before approving. Clanker V5 has a fixed protocol-controlled supply and live factory policies.</p>
     </form><aside className="factory-side"><div className="token-preview"><div className="token-preview-top"><span>LIVE PREVIEW</span><Coins size={17}/></div><div className="token-coin">{symbol.slice(0,1) || 'V'}</div><h2>{form.name.trim() || 'Your Token'}</h2><div className="token-symbol">{symbol ? '$' + symbol : '$SYMBOL'}</div><div className="token-supply"><span>BUY / SELL TAX</span><b>{form.buyFee}% / {form.sellFee}%</b></div><div className="token-supply"><span>NETWORK</span><b>BASE · 8453</b></div><div className="token-network"><i/> CLANKER V5 · MAINNET</div></div>
       <div className="factory-status-panel"><ShieldCheck size={21}/><b>Wallet-signed Clanker V5 launch</b><p>VICEXA prepares and records the launch. Clanker SDK submits the V5 deployment through your connected wallet. VICEXA never handles your private key.</p><div className="factory-status-tag">BASE MAINNET · REAL TRANSACTION</div></div><div className="factory-wallet-panel"><Wallet size={17}/><div><b>{account ? 'Wallet connected' : 'Wallet not connected'}</b><small>{account ? account.slice(0,6) + '…' + account.slice(-4) : 'Connect a Base-compatible wallet from the top bar.'}</small></div></div>{!session && <div className="factory-error">Sign in to VICEXA to create a tracked launch.</div>}

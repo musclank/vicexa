@@ -1,15 +1,16 @@
 # VICEXA
 
-**Base Launchpad.** Discover projects, connect your wallet, and prepare launches on Base.
+**Base Token Factory.** Configure fixed-supply ERC-20 tokens through a guided wallet-based workflow.
 
-VICEXA is a Base-focused launchpad interface built with React and Vite. This repository contains the frontend foundation; on-chain launch functionality is not yet live.
+VICEXA is a React and Vite application for creating fixed-supply tokens on Base. The current development flow is restricted to **Base Sepolia testnet**. Token drafts can be saved locally, and the Create Token transaction flow becomes available only after the VICEXA factory contract is deployed to Base Sepolia and its public address is configured in Cloudflare Pages.
 
 ## Stack
-- React 18
-- Vite 6
-- Plain CSS
-- Base Mainnet wallet connection (EVM-compatible browser wallets)
-- Cloudflare Pages deployment
+- React 18 and Vite 6
+- Ethers v6 for EVM wallet transactions
+- Solidity 0.8.24 and OpenZeppelin Contracts 5.x
+- Hardhat contract tests and deployment tooling
+- Cloudflare Pages
+- Supabase authentication
 
 ## Local development
 ```bash
@@ -17,60 +18,56 @@ npm install
 npm run dev
 ```
 
-## Production build
+## Build and tests
 ```bash
 npm run build
-npm run preview
+npm run test:contracts
 ```
 
 Vite outputs the production site to `dist/`.
 
 ## Cloudflare Pages
-Connect this repository to a Cloudflare Pages project with:
 - Production branch: `main`
 - Build command: `npm run build`
 - Build output directory: `dist`
 - Root directory: `/`
 
-Each push to `main` should trigger a new production deployment when the Git integration is connected.
+Each push to `main` triggers a production deployment when the Git integration is connected.
 
 ## Current frontend scope
-- VICEXA Base-first launchpad interface
-- Overview and launch discovery screens
-- Create-launch form with local draft persistence in the current browser
-- EVM wallet connection when a compatible browser wallet is available
-- Base Mainnet chain detection and switch/add-network flow
+- Overview, Explore Tokens, and Create a Token screens
+- Token configuration: name, symbol, whole-token supply, decimals, description, and website
+- Local token draft persistence in the current browser
+- EVM wallet connection that switches to Base Sepolia (chain ID 84532)
+- Ethers-based factory transaction flow, gated by the configured Base Sepolia factory address
+- Transaction receipt parsing and Base Sepolia explorer links
+- Google and email authentication through Supabase
 - Responsive dark interface
 
-## Not live yet
-- Public on-chain launch registry
-- Launch factory or token deployment smart contracts
-- On-chain project creation and launch execution
-- Liquidity provisioning, trading, and live market indexing
-- Server-side project draft storage
+## Contracts
+- `contracts/VicexaToken.sol`: fixed-supply ERC-20 token; the creator receives the full initial supply. No owner role or additional mint function.
+- `contracts/VicexaTokenFactory.sol`: permissionless factory that emits `TokenCreated`.
+- `deploy-factory.cjs`: guarded Hardhat deployment script that refuses to deploy to any chain other than Base Sepolia.
+- `contracts/README.md`: compile, deploy, and testnet setup notes.
 
-Project drafts currently remain in the browser's local storage and are not published to the blockchain or shared with other users. Do not treat the current interface as a production launch service.
-
-## Next development stages
-1. Build and test the launch factory on Base Sepolia.
-2. Add secure backend storage and a public launch registry.
-3. Implement launch configuration, validation, and transaction flows.
-4. Add indexing, launch status, and market data.
-5. Complete security review before any Base Mainnet launch.
+Run `npm run test:contracts` to execute the Hardhat test suite. Run `npm run deploy:sepolia` only after setting a local `DEPLOYER_PRIVATE_KEY` and funding that wallet with Base Sepolia test ETH. Never commit the private key or place it in a `VITE_` variable.
 
 ## Environment variables
-Copy `.env.example` to `.env.local` when backend integrations are introduced. Only public client keys may use the `VITE_` prefix. Never expose Supabase service-role keys, private keys, seed phrases, or wallet secrets in frontend code.
+Copy `.env.example` to a local `.env` file for local configuration. Keep secrets out of source control.
 
-## Supabase authentication setup
-If Supabase authentication is enabled in this project:
+- `VITE_SUPABASE_URL`: public Supabase project URL.
+- `VITE_SUPABASE_ANON_KEY`: public Supabase anon/publishable key.
+- `VITE_BASE_SEPOLIA_FACTORY_ADDRESS`: public factory contract address after deployment to Base Sepolia.
+- `BASE_SEPOLIA_RPC_URL`: optional deployment RPC URL.
+- `DEPLOYER_PRIVATE_KEY`: local-only deployment credential; never expose it to frontend code or commit it.
 
-1. Create a Supabase project.
-2. Open **Project Settings → API** and copy the Project URL and anon/public key.
-3. In Cloudflare Pages, open **Settings → Variables and Secrets**.
-4. Add:
-   - `VITE_SUPABASE_URL`
-   - `VITE_SUPABASE_ANON_KEY`
-5. Save and trigger a new deployment.
-6. Configure the deployed VICEXA domain in Supabase **Authentication → URL Configuration**.
+In Cloudflare Pages, set only the public `VITE_` values. After adding or changing the factory address, trigger a new deployment so Vite embeds the value in the build.
 
-Protect user data with Supabase Row Level Security policies. Never expose a service-role key in client-side `VITE_` variables.
+## Safety and release status
+- Base Mainnet token deployment is not enabled.
+- The current contract source is an initial implementation and has not been independently audited.
+- The factory must pass the GitHub Actions build and Solidity tests, be deployed and exercised on Base Sepolia, and receive independent security review before any Mainnet release.
+- A successful wallet connection does not mean a token has been deployed. A token exists on-chain only after its transaction is confirmed and the factory event is read.
+- Testnet ETH has no real-world value.
+
+Never expose seed phrases, private keys, Supabase service-role keys, or wallet secrets in frontend variables, source files, screenshots, or chat.

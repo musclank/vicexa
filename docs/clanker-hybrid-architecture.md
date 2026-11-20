@@ -31,7 +31,7 @@ Clanker's public deployment REST endpoint currently documents a V4-shaped reques
 - SUPABASE_URL
 - SUPABASE_ANON_KEY
 - SUPABASE_SERVICE_ROLE_KEY (server only; never expose as VITE_ variable)
-- Optional BASE_RPC_URL if a dedicated public RPC is configured.
+- BASE_RPC_URL (required for the server to verify the transaction receipt and deployed token code before confirming a launch).
 
 No Clanker private key or partner API key is required for direct wallet-signed V5 launches. Never place wallet private keys in environment variables or server storage.
 

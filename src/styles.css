@@ -153,3 +153,22 @@ body{
   .sidebar{background:linear-gradient(180deg,rgba(27,14,37,.98),rgba(12,13,28,.98));border-bottom-color:#ff8cbd40}
   .launch-welcome{background:linear-gradient(145deg,rgba(36,17,43,.94),rgba(18,24,47,.94))}
 }
+
+
+/* Original Vice City skyline artwork */
+body{
+  background-color:#100b20;
+  background-image:
+    linear-gradient(180deg,rgba(12,8,25,.30) 0%,rgba(12,8,25,.48) 48%,rgba(8,9,24,.88) 100%),
+    url('/vice-city-bg.svg');
+  background-size:cover;
+  background-position:center top;
+  background-repeat:no-repeat;
+  background-attachment:fixed;
+}
+.launch-app{background:linear-gradient(180deg,rgba(12,8,25,.10),rgba(8,9,24,.38));}
+.launch-app:before{opacity:.32}
+.launch-main{background:linear-gradient(180deg,rgba(10,8,23,.10),rgba(10,9,25,.36))}
+@media(max-width:680px){
+  body{background-position:58% top;background-attachment:scroll}
+}

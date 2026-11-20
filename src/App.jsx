@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ArrowUpRight, Bell, ChevronDown, CircleHelp, Compass, ExternalLink, Flame, LayoutDashboard, LogOut, Plus, Rocket, Search, ShieldCheck, Sparkles, Wallet, X } from 'lucide-react'
 import Auth from './components/Auth'
+import TokenFactory from './components/TokenFactory'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const BASE_CHAIN_ID = '0x2105'
@@ -13,8 +14,8 @@ const BASE_PARAMS = {
 }
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'explore', label: 'Explore launches', icon: Compass },
-  { id: 'create', label: 'Create a launch', icon: Plus },
+  { id: 'explore', label: 'Explore tokens', icon: Compass },
+  { id: 'create', label: 'Create a token', icon: Plus },
 ]
 
 function App() {
@@ -89,6 +90,13 @@ function App() {
     setActive('explore')
   }
 
+  function saveTokenDraft(token) {
+    const item = { ...token, id: Date.now() }
+    setDrafts(current => [item, ...current])
+    setNotice('Token configuration saved locally. No contract has been deployed.')
+    setActive('explore')
+  }
+
   const shortAddress = account ? account.slice(0, 6) + '...' + account.slice(-4) : ''
   const userName = session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0]
 
@@ -130,7 +138,8 @@ function App() {
 
           {active === 'explore' && <section className="page-section"><div className="launch-eyebrow"><span/> BASE PROJECT DIRECTORY</div><h1 className="page-title">EXPLORE<br/><span className="launch-gradient">LAUNCHES.</span></h1><p className="page-lead">Find projects preparing to launch on Base.</p>{drafts.length === 0 ? <div className="large-empty"><div className="empty-icon"><Search size={24}/></div><h2>No projects listed yet</h2><p>The public launch directory will populate after the VICEXA registry and review workflow are connected.</p><button className="launch-primary" onClick={() => setActive('create')}>Submit a project <Plus size={16}/></button></div> : <div className="draft-list">{drafts.map(draft => <article className="draft-card" key={draft.id}><div className="draft-token">{draft.ticker.slice(0,1)}</div><div className="draft-info"><b>{draft.name} <span>${draft.ticker}</span></b><p>{draft.description}</p><small>LOCAL DRAFT · NOT ON-CHAIN</small></div><span className="status-chip">DRAFT</span></article>)}</div>}</section>}
 
-          {active === 'create' && <section className="page-section"><div className="launch-eyebrow"><span/> PROJECT ONBOARDING</div><h1 className="page-title">START YOUR<br/><span className="launch-gradient">LAUNCH.</span></h1><p className="page-lead">Introduce your project to the VICEXA ecosystem on Base.</p><div className="create-layout"><form className="create-form" onSubmit={submitDraft}><div className="form-heading"><b>Project details</b><span>STEP 01 / 02</span></div><label>PROJECT NAME<input required maxLength={48} placeholder="e.g. Frontier Protocol" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}/></label><label>TOKEN TICKER<input required maxLength={10} placeholder="e.g. FRONT" value={form.ticker} onChange={e => setForm({ ...form, ticker: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}/><small>Letters and numbers only. Maximum 10 characters.</small></label><label>PROJECT DESCRIPTION<textarea required maxLength={500} rows={4} placeholder="What are you building? What problem does it solve?" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}/><small>{form.description.length}/500 characters</small></label><label>WEBSITE <span className="optional">OPTIONAL</span><input type="url" placeholder="https://yourproject.xyz" value={form.website} onChange={e => setForm({ ...form, website: e.target.value })}/></label><button className="launch-primary submit-draft" type="submit">Save project draft <ArrowUpRight size={16}/></button><p className="form-disclaimer">Saving a draft does not create a token or submit an on-chain transaction.</p></form><aside className="launch-info-panel"><ShieldCheck size={22}/><b>Built on Base</b><p>VICEXA is designed for Base Mainnet. Wallet connection is available now; token deployment will be enabled after the launch factory contract is deployed and verified.</p><div className="info-divider"/><b>What happens next?</b><ul><li>Save your project details</li><li>Complete project verification</li><li>Configure token and liquidity parameters</li><li>Deploy through the official launch contract</li></ul><span className="status-chip">ON-CHAIN LAUNCH: NOT YET ENABLED</span></aside></div></section>}
+          {active === 'create' && <TokenFactory account={account} onSaveDraft={saveTokenDraft}/>}
+
         </div>
         <footer className="launch-footer"><span>© {new Date().getFullYear()} VICEXA</span><span>POWERED BY BASE <span className="footer-dot">·</span> BUILT FOR WHAT'S NEXT</span><a href="https://basescan.org/" target="_blank" rel="noreferrer">BASESCAN <ExternalLink size={12}/></a></footer>
       </section>

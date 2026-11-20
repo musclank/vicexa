@@ -16,9 +16,8 @@ export default function TokenFactory({ account, onSaveDraft }) {
   const [error, setError] = useState('')
 
   const formattedSupply = useMemo(() => {
-    const value = Number(form.supply)
-    if (!Number.isFinite(value) || value < 0) return '—'
-    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(value)
+    if (!/^\\d+$/.test(form.supply)) return '—'
+    try { return new Intl.NumberFormat('en-US').format(BigInt(form.supply)) } catch { return '—' }
   }, [form.supply])
 
   function update(key, value) {
@@ -32,7 +31,8 @@ export default function TokenFactory({ account, onSaveDraft }) {
     setError('')
     const name = form.name.trim()
     const symbol = form.symbol.trim().toUpperCase()
-    const supply = Number(form.supply)
+    const supplyText = form.supply.trim()
+    const decimals = Number(form.decimals)
     if (!name || !symbol || !/^[A-Z0-9]{2,10}$/.test(symbol)) {
       setError('Enter a token name and a symbol containing 2–10 letters or numbers.')
       return
@@ -50,8 +50,8 @@ export default function TokenFactory({ account, onSaveDraft }) {
       ticker: symbol,
       description: form.description.trim(),
       website: form.website.trim(),
-      supply: form.supply.trim(),
-      decimals: Number(form.decimals),
+      supply: supplyText,
+      decimals,
       type: 'token',
       status: 'draft',
     })
@@ -76,8 +76,8 @@ export default function TokenFactory({ account, onSaveDraft }) {
           </label>
           <div className="factory-field-grid">
             <label>TOTAL SUPPLY
-              <input required inputMode="decimal" type="text" placeholder="1000000000" value={form.supply} onChange={e => update('supply', e.target.value.replace(/[^0-9.]/g, ''))}/>
-              <small>Initial token supply.</small>
+              <input required inputMode="decimal" type="text" placeholder="1000000000" value={form.supply} onChange={e => update('supply', e.target.value.replace(/\\D/g, ''))}/>
+              <small>Whole-token amount before decimals are applied.</small>
             </label>
             <label>TOKEN DECIMALS
               <select value={form.decimals} onChange={e => update('decimals', e.target.value)}>

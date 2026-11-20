@@ -112,7 +112,7 @@ function App() {
       <section className="launch-main">
         <header className="launch-topbar">
           <div className="breadcrumb">VICEXA <span>/</span> {navItems.find(item => item.id === active)?.label.toUpperCase()}</div>
-          <div className="top-actions"><span className="top-network"><i/> BASE</span><button className="icon-button" aria-label="Notifications"><Bell size={17}/></button><button className="wallet-button" onClick={connectWallet} disabled={walletBusy}><Wallet size={16}/>{walletBusy ? 'CONNECTING…' : shortAddress || 'Connect wallet'}</button></div>
+          <div className="top-actions"><span className="top-network"><i/> BASE</span><button className="icon-button" aria-label="Notifications"><Bell size={17}/></button><button className="auth-top-button" onClick={() => session ? signOut() : setAuthOpen(true)}>{session ? 'Sign out' : 'Sign in'}</button><button className="wallet-button" onClick={connectWallet} disabled={walletBusy}><Wallet size={16}/>{walletBusy ? 'CONNECTING…' : shortAddress || 'Connect wallet'}</button></div>
         </header>
 
         <div className="launch-content">

@@ -1,207 +1,68 @@
-import { useMemo, useState } from 'react'
-import { BrowserProvider, Contract } from 'ethers'
+import { useState } from 'react'
+import { createPublicClient, createWalletClient, custom, http, getAddress } from 'viem'
+import { base } from 'viem/chains'
+import { Clanker } from 'clanker-sdk/v5'
 import { ArrowRight, Check, CircleAlert, Coins, ExternalLink, ShieldCheck, Wallet, LoaderCircle } from 'lucide-react'
-
-const FACTORY_ADDRESS = import.meta.env.VITE_BASE_SEPOLIA_FACTORY_ADDRESS || ''
-const BASE_SEPOLIA_CHAIN_ID = 84532
-const FACTORY_ABI = [
-  'function createToken(string tokenName,string tokenSymbol,uint256 initialSupply,uint8 tokenDecimals) returns (address tokenAddress)',
-  'event TokenCreated(address indexed token,address indexed creator,string name,string symbol,uint256 initialSupply,uint8 decimals)',
-]
-
-const initialForm = {
-  name: '',
-  symbol: '',
-  supply: '1000000000',
-  decimals: '18',
-  description: '',
-  website: '',
-}
-
-export default function TokenFactory({ account, onSaveDraft }) {
-  const [form, setForm] = useState(initialForm)
-  const [saved, setSaved] = useState(false)
-  const [error, setError] = useState('')
-  const [txBusy, setTxBusy] = useState(false)
-  const [txHash, setTxHash] = useState('')
-  const [tokenAddress, setTokenAddress] = useState('')
-
-  const formattedSupply = useMemo(() => {
-    if (!/^\d+$/.test(form.supply)) return '—'
-    try { return new Intl.NumberFormat('en-US').format(BigInt(form.supply)) } catch { return '—' }
-  }, [form.supply])
-
-  function update(key, value) {
-    setSaved(false)
-    setError('')
-    setTxHash('')
-    setTokenAddress('')
-    setForm(current => ({ ...current, [key]: value }))
+const initialForm = { name: '', symbol: '', image: '', description: '', website: '', x: '', telegram: '', buyFee: '1', sellFee: '1' }
+export default function TokenFactory({ account, onSaveDraft, session }) {
+  const [form, setForm] = useState(initialForm); const [saved, setSaved] = useState(false); const [error, setError] = useState(''); const [txBusy, setTxBusy] = useState(false); const [txHash, setTxHash] = useState(''); const [tokenAddress, setTokenAddress] = useState(''); const [launchStatus, setLaunchStatus] = useState('')
+  const update = (key, value) => { setSaved(false); setError(''); setForm(current => ({ ...current, [key]: value })) }
+  const validate = () => {
+    const name = form.name.trim(); const symbol = form.symbol.trim().toUpperCase(); const buyFee = Number(form.buyFee); const sellFee = Number(form.sellFee)
+    if (!name || name.length > 64) throw new Error('Token name must contain 1–64 characters.')
+    if (!/^[A-Z0-9]{2,16}$/.test(symbol)) throw new Error('Symbol must contain 2–16 uppercase letters or numbers.')
+    if (![buyFee, sellFee].every(v => Number.isInteger(v) && v >= 1 && v <= 10)) throw new Error('Buy and sell tax settings must each be between 1% and 10%. The live factory policy applies.')
+    for (const value of [form.image, form.website, form.x, form.telegram]) if (value && !(value.startsWith('https://') || value.startsWith('ipfs://'))) throw new Error('Image and social links must use HTTPS or IPFS URLs.')
+    if (form.description.length > 500) throw new Error('Description must be 500 characters or fewer.')
+    return { name, symbol, buyFee, sellFee }
   }
-
-  function validate() {
-    const name = form.name.trim()
-    const symbol = form.symbol.trim().toUpperCase()
-    const supplyText = form.supply.trim()
-    const decimals = Number(form.decimals)
-    if (!name || name.length > 48 || !symbol || !/^[A-Z0-9]{2,10}$/.test(symbol)) {
-      throw new Error('Enter a token name (up to 48 characters) and a symbol containing 2–10 uppercase letters or numbers.')
-    }
-    if (!/^\d+$/.test(supplyText) || BigInt(supplyText) <= 0n) {
-      throw new Error('Enter a whole-number token supply greater than zero.')
-    }
-    const maxSupply = ((1n << 256n) - 1n) / (10n ** BigInt(decimals))
-    if (BigInt(supplyText) > maxSupply) throw new Error('This supply is too large for the selected decimals.')
-    if (form.description.trim().length > 500) throw new Error('Description must be 500 characters or fewer.')
-    return { name, symbol, supply: BigInt(supplyText), decimals }
-  }
-
-  function saveDraft(event) {
-    event.preventDefault()
-    setError('')
-    try {
-      const values = validate()
-      onSaveDraft({
-        name: values.name,
-        ticker: values.symbol,
-        description: form.description.trim(),
-        website: form.website.trim(),
-        supply: values.supply.toString(),
-        decimals: values.decimals,
-        type: 'token',
-        status: 'draft',
-      })
-      setSaved(true)
-    } catch (validationError) {
-      setError(validationError.message)
-    }
-  }
-
+  function saveDraft(event) { event.preventDefault(); try { const v = validate(); onSaveDraft({ name: v.name, ticker: v.symbol, description: form.description.trim(), website: form.website.trim(), type: 'clanker-v5', status: 'draft' }); setSaved(true); setError('') } catch (e) { setError(e.message) } }
+  async function updateServerRecord(id, payload) { const response = await fetch('/api/launch-intents', { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ id, ...payload }) }); if (!response.ok) throw new Error('The on-chain action finished, but VICEXA could not update its launch record. Check the transaction before retrying.') }
   async function createToken() {
-    setError('')
-    setTxHash('')
-    setTokenAddress('')
-    if (!account || !window.ethereum) {
-      setError('Connect an EVM wallet before creating a token.')
-      return
-    }
-    if (!FACTORY_ADDRESS || !/^0x[a-fA-F0-9]{40}$/.test(FACTORY_ADDRESS)) {
-      setError('The VICEXA Base Sepolia factory address is not configured yet. Deployment is not available until the factory contract is deployed and its address is added to the site environment.')
-      return
-    }
-
-    let values
+    setError(''); setTxHash(''); setTokenAddress(''); setLaunchStatus('')
+    if (!session?.access_token) { setError('Sign in to VICEXA before launching a token.'); return }
+    if (!account || !window.ethereum) { setError('Connect an EVM wallet before launching.'); return }
+    let v; try { v = validate() } catch (e) { setError(e.message); return }
+    setTxBusy(true); let launchId = ''; let sentTxHash = ''
     try {
-      values = validate()
-    } catch (validationError) {
-      setError(validationError.message)
-      return
-    }
-
-    setTxBusy(true)
-    try {
-      const provider = new BrowserProvider(window.ethereum)
-      const network = await provider.getNetwork()
-      if (Number(network.chainId) !== BASE_SEPOLIA_CHAIN_ID) {
-        throw new Error('Switch your wallet to Base Sepolia before submitting this transaction.')
-      }
-      const signer = await provider.getSigner()
-      const factory = new Contract(FACTORY_ADDRESS, FACTORY_ABI, signer)
-      const tx = await factory.createToken(values.name, values.symbol, values.supply, values.decimals)
-      setTxHash(tx.hash)
-      const receipt = await tx.wait()
-      let created = ''
-      for (const log of receipt.logs) {
-        try {
-          const parsed = factory.interface.parseLog(log)
-          if (parsed?.name === 'TokenCreated') {
-            created = parsed.args.token
-            break
-          }
-        } catch { /* Ignore logs emitted by the newly created token. */ }
-      }
-      if (!created) throw new Error('Transaction confirmed, but the token address could not be read from the factory event. Check the transaction on BaseScan.')
-      setTokenAddress(created)
-    } catch (txError) {
-      setError(txError.shortMessage || txError.reason || txError.message || 'Token creation failed.')
-    } finally {
-      setTxBusy(false)
-    }
+      const chainId = await window.ethereum.request({ method: 'eth_chainId' }); if (chainId !== '0x2105') throw new Error('Switch your wallet to Base Mainnet before launching.')
+      const intentResponse = await fetch('/api/launch-intents', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ name: v.name, symbol: v.symbol, image: form.image.trim(), description: form.description.trim(), creatorWallet: getAddress(account) }) })
+      const intent = await intentResponse.json(); if (!intentResponse.ok) throw new Error(intent.error || 'Could not prepare the launch record.')
+      launchId = intent.launch.id; setLaunchStatus('AWAITING WALLET APPROVAL')
+      const wallet = createWalletClient({ account: getAddress(account), chain: base, transport: custom(window.ethereum) })
+      const publicClient = createPublicClient({ chain: base, transport: http(import.meta.env.VITE_BASE_RPC_URL || 'https://mainnet.base.org') })
+      const clanker = new Clanker({ wallet, publicClient })
+      const metadata = { description: form.description.trim(), socialMediaUrls: [ ...(form.website ? [{ platform: 'website', url: form.website.trim() }] : []), ...(form.x ? [{ platform: 'x', url: form.x.trim() }] : []), ...(form.telegram ? [{ platform: 'telegram', url: form.telegram.trim() }] : []) ] }
+      const deployment = await clanker.deploy({ name: v.name, symbol: v.symbol, ...(form.image.trim() ? { image: form.image.trim() } : {}), metadata, buyFee: v.buyFee, sellFee: v.sellFee, context: { interface: 'VICEXA', platform: 'VICEXA Launchpad' } })
+      if (deployment.error) throw deployment.error
+      sentTxHash = deployment.txHash; setTxHash(sentTxHash); setLaunchStatus('TRANSACTION SUBMITTED'); await updateServerRecord(launchId, { status: 'submitted', txHash: sentTxHash, expectedAddress: deployment.expectedAddress })
+      const receipt = await deployment.waitForTransaction()
+      if (receipt.error) { await updateServerRecord(launchId, { status: 'failed', txHash: sentTxHash, message: receipt.error.message }); throw receipt.error }
+      setTokenAddress(receipt.address); setLaunchStatus('CONFIRMED'); await updateServerRecord(launchId, { status: 'confirmed', txHash: sentTxHash, expectedAddress: deployment.expectedAddress, tokenAddress: receipt.address })
+    } catch (e) {
+      const message = e?.shortMessage || e?.message || 'Clanker V5 deployment failed.'
+      if (launchId && !sentTxHash && e?.data?.rawName !== 'SEND_UNCERTAIN') { try { await updateServerRecord(launchId, { status: 'failed', message }) } catch {} }
+      if (e?.data?.rawName === 'SEND_UNCERTAIN') { setLaunchStatus('TRANSACTION STATUS UNKNOWN'); setError('The wallet or RPC response was interrupted during submission. Do not retry yet. Check your wallet activity and BaseScan first.') } else setError(message)
+    } finally { setTxBusy(false) }
   }
-
-  return (
-    <section className="page-section token-factory-page">
-      <div className="launch-eyebrow"><span/> BASE SEPOLIA TOKEN FACTORY</div>
-      <h1 className="page-title">CREATE YOUR<br/><span className="launch-gradient">TOKEN.</span></h1>
-      <p className="page-lead">Configure a fixed-supply ERC-20 token and test its deployment on Base Sepolia.</p>
-
-      <div className="factory-layout">
-        <form className="create-form factory-form" onSubmit={saveDraft}>
-          <div className="form-heading"><b>Token configuration</b><span>STEP 01 / 02</span></div>
-          <label>TOKEN NAME
-            <input required maxLength={48} placeholder="e.g. Frontier Token" value={form.name} onChange={e => update('name', e.target.value)}/>
-          </label>
-          <label>TOKEN SYMBOL
-            <input required maxLength={10} placeholder="e.g. FRONT" value={form.symbol} onChange={e => update('symbol', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}/>
-            <small>2–10 letters or numbers. Displayed with a $ prefix.</small>
-          </label>
-          <div className="factory-field-grid">
-            <label>TOTAL SUPPLY
-              <input required inputMode="numeric" type="text" placeholder="1000000000" value={form.supply} onChange={e => update('supply', e.target.value.replace(/\D/g, ''))}/>
-              <small>Whole-token amount before decimals are applied.</small>
-            </label>
-            <label>TOKEN DECIMALS
-              <select value={form.decimals} onChange={e => update('decimals', e.target.value)}>
-                <option value="18">18 — Standard</option>
-                <option value="9">9</option>
-                <option value="6">6</option>
-                <option value="0">0</option>
-              </select>
-              <small>18 is the common ERC-20 setting.</small>
-            </label>
-          </div>
-          <label>DESCRIPTION <span className="optional">OPTIONAL</span>
-            <textarea rows={4} maxLength={500} placeholder="Describe your token and its purpose." value={form.description} onChange={e => update('description', e.target.value)}/>
-            <small>{form.description.length}/500 characters</small>
-          </label>
-          <label>WEBSITE <span className="optional">OPTIONAL</span>
-            <input type="url" placeholder="https://yourproject.xyz" value={form.website} onChange={e => update('website', e.target.value)}/>
-          </label>
-          {error && <div className="factory-error" role="alert"><CircleAlert size={15}/>{error}</div>}
-          {saved && <div className="factory-saved" role="status"><Check size={15}/> Token configuration saved to your drafts in this browser.</div>}
-          {tokenAddress && <div className="factory-saved" role="status"><Check size={15}/> Token deployed: <a href={`https://sepolia.basescan.org/address/${tokenAddress}`} target="_blank" rel="noreferrer">{tokenAddress.slice(0, 8)}…{tokenAddress.slice(-6)} <ExternalLink size={12}/></a></div>}
-          {txHash && <div className="factory-tx-link">Transaction: <a href={`https://sepolia.basescan.org/tx/${txHash}`} target="_blank" rel="noreferrer">{txHash.slice(0, 10)}…{txHash.slice(-6)} <ExternalLink size={12}/></a></div>}
-          <button className="launch-primary submit-draft" type="submit">Save token draft <ArrowRight size={16}/></button>
-          <button className="launch-primary submit-draft factory-deploy-button" type="button" onClick={createToken} disabled={txBusy || !account || !FACTORY_ADDRESS}>
-            {txBusy ? <><LoaderCircle size={16} className="factory-spinner"/> WAITING FOR CONFIRMATION…</> : <>Create token on Base Sepolia <ArrowRight size={16}/></>}
-          </button>
-          <p className="form-disclaimer">Testnet only. Creating a token requires a deployed factory contract, a connected wallet, and a transaction confirmation. Test ETH has no real-world value.</p>
-        </form>
-
-        <aside className="factory-side">
-          <div className="token-preview">
-            <div className="token-preview-top"><span>LIVE PREVIEW</span><Coins size={17}/></div>
-            <div className="token-coin">{form.symbol.trim().slice(0, 1).toUpperCase() || 'V'}</div>
-            <h2>{form.name.trim() || 'Your Token'}</h2>
-            <div className="token-symbol">{form.symbol.trim() ? '$' + form.symbol.trim().toUpperCase() : '$SYMBOL'}</div>
-            <div className="token-supply"><span>INITIAL SUPPLY</span><b>{formattedSupply}</b></div>
-            <div className="token-supply"><span>DECIMALS</span><b>{form.decimals}</b></div>
-            <div className="token-network"><i/> BASE SEPOLIA · CHAIN 84532</div>
-          </div>
-          <div className="factory-status-panel">
-            <ShieldCheck size={21}/>
-            <b>{FACTORY_ADDRESS ? 'Testnet deployment configured' : 'Factory contract address required'}</b>
-            <p>{FACTORY_ADDRESS ? 'The site is configured to call the VICEXA factory on Base Sepolia. Confirm you are using a test wallet with test ETH.' : 'The wallet flow is prepared, but token creation stays disabled until the factory contract is deployed to Base Sepolia and VITE_BASE_SEPOLIA_FACTORY_ADDRESS is configured in Cloudflare Pages.'}</p>
-            <div className="factory-status-tag">BASE SEPOLIA · TESTNET ONLY</div>
-          </div>
-          <div className="factory-wallet-panel">
-            <Wallet size={17}/>
-            <div><b>{account ? 'Wallet connected' : 'Wallet not connected'}</b><small>{account ? account.slice(0, 6) + '…' + account.slice(-4) : 'Connect a Base-compatible wallet from the top bar.'}</small></div>
-          </div>
-          <a className="factory-doc-link" href="https://docs.base.org/chain/network-faucets" target="_blank" rel="noreferrer">Get Base Sepolia test ETH <ExternalLink size={13}/></a>
-          <a className="factory-doc-link" href="https://sepolia.basescan.org/" target="_blank" rel="noreferrer">Base Sepolia explorer <ExternalLink size={13}/></a>
-        </aside>
-      </div>
-    </section>
-  )
+  const symbol = form.symbol.trim().toUpperCase(); const txUrl = txHash ? 'https://basescan.org/tx/' + txHash : ''; const tokenUrl = tokenAddress ? 'https://basescan.org/token/' + tokenAddress : ''
+  return <section className="page-section token-factory-page">
+    <div className="launch-eyebrow"><span/> CLANKER V5 · BASE MAINNET</div><h1 className="page-title">CREATE YOUR<br/><span className="launch-gradient">TOKEN.</span></h1><p className="page-lead">Launch a Clanker V5 token on Base. Your wallet approves the transaction; VICEXA records the launch.</p>
+    <div className="factory-layout"><form className="create-form factory-form" onSubmit={saveDraft}>
+      <div className="form-heading"><b>Token configuration</b><span>STEP 01 / 02</span></div>
+      <label>TOKEN NAME<input required maxLength={64} placeholder="e.g. Frontier Token" value={form.name} onChange={e => update('name', e.target.value)}/></label>
+      <label>TOKEN SYMBOL<input required maxLength={16} placeholder="e.g. FRONT" value={form.symbol} onChange={e => update('symbol', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}/><small>2–16 uppercase letters or numbers.</small></label>
+      <label>TOKEN IMAGE URL <span className="optional">OPTIONAL</span><input type="url" placeholder="https://… or ipfs://…" value={form.image} onChange={e => update('image', e.target.value)}/></label>
+      <label>DESCRIPTION <span className="optional">OPTIONAL</span><textarea rows={4} maxLength={500} placeholder="Describe your token and its purpose." value={form.description} onChange={e => update('description', e.target.value)}/><small>{form.description.length}/500 characters</small></label>
+      <label>WEBSITE <span className="optional">OPTIONAL</span><input type="url" placeholder="https://yourproject.xyz" value={form.website} onChange={e => update('website', e.target.value)}/></label>
+      <label>X PROFILE <span className="optional">OPTIONAL</span><input type="url" placeholder="https://x.com/yourproject" value={form.x} onChange={e => update('x', e.target.value)}/></label>
+      <label>TELEGRAM <span className="optional">OPTIONAL</span><input type="url" placeholder="https://t.me/yourproject" value={form.telegram} onChange={e => update('telegram', e.target.value)}/></label>
+      <div className="factory-field-grid"><label>BUY TAX<select value={form.buyFee} onChange={e => update('buyFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label><label>SELL TAX<select value={form.sellFee} onChange={e => update('sellFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label></div>
+      {error && <div className="factory-error" role="alert"><CircleAlert size={15}/>{error}</div>}{saved && <div className="factory-saved" role="status"><Check size={15}/> Token configuration saved as a local draft.</div>}{launchStatus && <div className="factory-tx-link">LAUNCH STATUS: {launchStatus}</div>}
+      {tokenAddress && <div className="factory-saved" role="status"><Check size={15}/> Token confirmed: <a href={tokenUrl} target="_blank" rel="noreferrer">{tokenAddress.slice(0,8)}…{tokenAddress.slice(-6)} <ExternalLink size={12}/></a> · <a href={'https://www.clanker.world/clanker/' + tokenAddress} target="_blank" rel="noreferrer">Clanker <ExternalLink size={12}/></a></div>}{txUrl && <div className="factory-tx-link">Transaction: <a href={txUrl} target="_blank" rel="noreferrer">{txHash.slice(0,10)}…{txHash.slice(-6)} <ExternalLink size={12}/></a></div>}
+      <button className="launch-primary submit-draft" type="submit">Save token draft <ArrowRight size={16}/></button><button className="launch-primary submit-draft factory-deploy-button" type="button" onClick={createToken} disabled={txBusy || !account || !session}>{txBusy ? <><LoaderCircle size={16} className="factory-spinner"/> LAUNCHING…</> : <>Launch on Base Mainnet <ArrowRight size={16}/></>}</button>
+      <p className="form-disclaimer">Mainnet launch uses real ETH for gas. Review the token configuration and every wallet prompt before approving. Clanker V5 has a fixed protocol-controlled supply and live factory policies.</p>
+    </form><aside className="factory-side"><div className="token-preview"><div className="token-preview-top"><span>LIVE PREVIEW</span><Coins size={17}/></div><div className="token-coin">{symbol.slice(0,1) || 'V'}</div><h2>{form.name.trim() || 'Your Token'}</h2><div className="token-symbol">{symbol ? '$' + symbol : '$SYMBOL'}</div><div className="token-supply"><span>BUY / SELL TAX</span><b>{form.buyFee}% / {form.sellFee}%</b></div><div className="token-supply"><span>NETWORK</span><b>BASE · 8453</b></div><div className="token-network"><i/> CLANKER V5 · MAINNET</div></div>
+      <div className="factory-status-panel"><ShieldCheck size={21}/><b>Wallet-signed Clanker V5 launch</b><p>VICEXA prepares and records the launch. Clanker SDK submits the V5 deployment through your connected wallet. VICEXA never handles your private key.</p><div className="factory-status-tag">BASE MAINNET · REAL TRANSACTION</div></div><div className="factory-wallet-panel"><Wallet size={17}/><div><b>{account ? 'Wallet connected' : 'Wallet not connected'}</b><small>{account ? account.slice(0,6) + '…' + account.slice(-4) : 'Connect a Base-compatible wallet from the top bar.'}</small></div></div>{!session && <div className="factory-error">Sign in to VICEXA to create a tracked launch.</div>}
+      <a className="factory-doc-link" href="https://docs.clanker.world/" target="_blank" rel="noreferrer">Clanker V5 documentation <ExternalLink size={13}/></a><a className="factory-doc-link" href="https://basescan.org/" target="_blank" rel="noreferrer">Base Mainnet explorer <ExternalLink size={13}/></a></aside></div></section>
 }

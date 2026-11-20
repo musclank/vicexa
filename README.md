@@ -23,6 +23,7 @@ npm run dev
 ```bash
 npm run build
 npm run preview
+npm run test:contracts
 ```
 
 Vite outputs the production site to `dist/`.
@@ -43,6 +44,11 @@ Each push to `main` triggers a production deployment when the Git integration is
 - EVM wallet connection and Base Mainnet chain detection
 - Google and email authentication through Supabase
 - Responsive dark interface
+
+## Automated checks
+GitHub Actions runs the Vite production build and the Hardhat contract test suite on pull requests to `main` and pushes to `main`.
+
+Run the Solidity tests locally with `npm run test:contracts`.
 
 ## Contract source
 - `contracts/VicexaToken.sol`: fixed-supply ERC-20 token; initial supply is minted to the creator, with no owner role or additional mint function.

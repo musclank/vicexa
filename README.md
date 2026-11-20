@@ -1,8 +1,8 @@
 # VICEXA
 
-**Base Launchpad.** Discover projects, connect your wallet, and prepare launches on Base.
+**Base Token Factory.** Configure token deployments for Base through a guided, wallet-based workflow.
 
-VICEXA is a Base-focused launchpad interface built with React and Vite. This repository contains the frontend foundation; on-chain launch functionality is not yet live.
+VICEXA is a Base-focused Token Factory interface built with React and Vite. The current implementation provides token configuration and local draft saving. On-chain token deployment is not yet enabled.
 
 ## Stack
 - React 18

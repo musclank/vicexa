@@ -139,7 +139,7 @@ function App() {
   return (
     <main className="launch-app">
       <aside className="sidebar">
-        <a className="launch-brand" href="#" onClick={e => { e.preventDefault(); setActive('overview') }}><span className="brand-mark">V</span><span>VICEXA<small>LAUNCHPAD</small></span></a>
+        <a className="launch-brand" href="#" onClick={e => { e.preventDefault(); setActive('overview') }}><span className="brand-mark brand-mark-duo"><img src="/vicexa-duo-avatar.svg" alt="VICEXA duo" /></span><span>VICEXA<small>LAUNCHPAD</small></span></a>
         <div className="network-pill"><span/> BASE MAINNET <ChevronDown size={13}/></div>
         <div className="side-label">WORKSPACE</div>
         <nav className="side-nav">

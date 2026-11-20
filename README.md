@@ -1,73 +1,94 @@
 # VICEXA
 
-**Base Token Factory.** Configure fixed-supply ERC-20 tokens through a guided wallet-based workflow.
+**VICEXA is a wallet-signed token launchpad for Base Mainnet using Clanker V5.**
 
-VICEXA is a React and Vite application for creating fixed-supply tokens on Base. The current development flow is restricted to **Base Sepolia testnet**. Token drafts can be saved locally, and the Create Token transaction flow becomes available only after the VICEXA factory contract is deployed to Base Sepolia and its public address is configured in Cloudflare Pages.
+Users configure a token, review the launch settings, and approve the deployment from their own EVM wallet. VICEXA does not receive or store wallet private keys. This project does not provide presales, fundraising, or a token-sale module.
 
 ## Stack
+
 - React 18 and Vite 6
-- Ethers v6 for EVM wallet transactions
-- Solidity 0.8.24 and OpenZeppelin Contracts 5.x
-- Hardhat contract tests and deployment tooling
-- Cloudflare Pages
-- Supabase authentication
+- Cloudflare Pages and Pages Functions
+- Supabase Auth and Postgres for accounts and launch records
+- viem and the Clanker V5 SDK for wallet-signed Base launches
+- Base Mainnet (chain ID 8453)
 
 ## Local development
+
 ```bash
 npm install
 npm run dev
 ```
 
-## Build and tests
+## Build
+
 ```bash
 npm run build
-npm run test:contracts
 ```
 
 Vite outputs the production site to `dist/`.
 
 ## Cloudflare Pages
+
 - Production branch: `main`
 - Build command: `npm run build`
 - Build output directory: `dist`
 - Root directory: `/`
 
-Each push to `main` triggers a production deployment when the Git integration is connected.
+The `functions/api/launch-intents.js` Pages Function handles authenticated launch records. Deployments must include the `functions/` directory so Cloudflare Pages can publish the API routes.
 
-## Current frontend scope
-- Overview, Explore Tokens, and Create a Token screens
-- Token configuration: name, symbol, whole-token supply, decimals, description, and website
-- Local token draft persistence in the current browser
-- EVM wallet connection that switches to Base Sepolia (chain ID 84532)
-- Ethers-based factory transaction flow, gated by the configured Base Sepolia factory address
-- Transaction receipt parsing and Base Sepolia explorer links
-- Google and email authentication through Supabase
-- Responsive dark interface
+## Authentication and server configuration
 
-## Contracts
-- `contracts/VicexaToken.sol`: fixed-supply ERC-20 token; the creator receives the full initial supply. No owner role or additional mint function.
-- `contracts/VicexaTokenFactory.sol`: permissionless factory that emits `TokenCreated`.
-- `deploy-factory.cjs`: guarded Hardhat deployment script that refuses to deploy to any chain other than Base Sepolia.
-- `contracts/README.md`: compile, deploy, and testnet setup notes.
+The browser uses these public build variables:
 
-Run `npm run test:contracts` to execute the Hardhat test suite. Run `npm run deploy:sepolia` only after setting a local `DEPLOYER_PRIVATE_KEY` and funding that wallet with Base Sepolia test ETH. Never commit the private key or place it in a `VITE_` variable.
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_BASE_RPC_URL` (optional public RPC override; the app defaults to the public Base RPC)
 
-## Environment variables
-Copy `.env.example` to a local `.env` file for local configuration. Keep secrets out of source control.
+Configure these server-side Cloudflare Pages variables/secrets for Pages Functions:
 
-- `VITE_SUPABASE_URL`: public Supabase project URL.
-- `VITE_SUPABASE_ANON_KEY`: public Supabase anon/publishable key.
-- `VITE_BASE_SEPOLIA_FACTORY_ADDRESS`: public factory contract address after deployment to Base Sepolia.
-- `BASE_SEPOLIA_RPC_URL`: optional deployment RPC URL.
-- `DEPLOYER_PRIVATE_KEY`: local-only deployment credential; never expose it to frontend code or commit it.
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (secret; server-side only)
+- `BASE_RPC_URL` (required for server-side transaction and deployed-code verification)
 
-In Cloudflare Pages, set only the public `VITE_` values. After adding or changing the factory address, trigger a new deployment so Vite embeds the value in the build.
+The Supabase service-role key must never use a `VITE_` prefix and must never be included in browser code, Git, screenshots, or chat.
 
-## Safety and release status
-- Base Mainnet token deployment is not enabled.
-- The current contract source is an initial implementation and has not been independently audited.
-- The factory must pass the GitHub Actions build and Solidity tests, be deployed and exercised on Base Sepolia, and receive independent security review before any Mainnet release.
-- A successful wallet connection does not mean a token has been deployed. A token exists on-chain only after its transaction is confirmed and the factory event is read.
-- Testnet ETH has no real-world value.
+## Database setup
 
-Never expose seed phrases, private keys, Supabase service-role keys, or wallet secrets in frontend variables, source files, screenshots, or chat.
+Before using tracked launches, review and apply:
+
+`supabase/migrations/202611200001_token_launches.sql`
+
+The migration creates the `token_launches` table and row-level security policies. Pages Functions use the server-only service-role key for controlled state transitions. Confirm the migration against the existing Supabase schema before applying it.
+
+## Token launch flow
+
+1. A user signs in with email and password.
+2. The user connects an EVM wallet and switches to Base Mainnet.
+3. The user configures token name, symbol, optional image and metadata, and reviews the Clanker V5 tax settings.
+4. VICEXA creates an authenticated launch-intent record.
+5. The Clanker V5 SDK prepares the deployment and requests approval from the connected wallet.
+6. The wallet submits the transaction. A transaction with an uncertain submission state must be checked on the wallet and BaseScan before retrying.
+7. The Pages Function checks the transaction receipt and deployed token code before recording a confirmed launch.
+8. The interface displays the transaction and token links.
+
+Clanker V5 controls token supply and pool behavior. VICEXA does not offer arbitrary ERC-20 supply or decimals in this launch flow. Fee and reward behavior is governed by Clanker's current factory policy; do not treat preview settings as a guaranteed return.
+
+## Validation
+
+The repository CI runs:
+
+```bash
+npm run build
+npm run test:contracts
+```
+
+The Solidity factory tests are retained for the separate fixed-supply factory prototype; they are not the deployment path used by the Clanker V5 launch screen.
+
+## Mainnet safety
+
+- Base Mainnet launches are real on-chain transactions and require ETH for gas.
+- Review token metadata, fee settings, and every wallet prompt before signing.
+- Never share seed phrases or private keys.
+- A launch is not confirmed merely because a wallet prompt was approved. Verify the transaction on BaseScan and ensure the token contract is deployed.
+- The integration and its server-side confirmation logic still require thorough review and independent security assessment before broad public use.

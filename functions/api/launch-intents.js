@@ -27,6 +27,24 @@ async function dbRequest(env, path, init) {
   });
 }
 
+export async function onRequestGet({ env }) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    return json({ error: "Token directory is temporarily unavailable." }, 503);
+  }
+  const response = await dbRequest(
+    env,
+    "token_launches?status=eq.confirmed&select=id,token_name,token_symbol,token_image_url,description,creator_wallet,token_address,transaction_hash,chain_id,network,confirmed_at&order=confirmed_at.desc&limit=100",
+    { method: "GET" }
+  );
+  const rows = await response.json().catch(() => null);
+  if (!response.ok || !Array.isArray(rows)) {
+    return json({ error: "Could not load the verified token directory." }, 502);
+  }
+  return json({
+    tokens: rows.filter((row) => row.token_address && row.transaction_hash && Number(row.chain_id) === 8453),
+  });
+}
+
 export async function onRequestPost({ request, env }) {
   const auth = await authenticate(request, env);
   if (auth.error) return auth.error;
@@ -39,7 +57,7 @@ export async function onRequestPost({ request, env }) {
   if (!name || name.length > 64 || !/^[A-Z0-9]{2,16}$/.test(symbol) || !/^0x[a-fA-F0-9]{40}$/.test(wallet)) return json({ error: "Invalid token name, symbol, or creator wallet." }, 400);
   if (image && !(image.startsWith("https://") || image.startsWith("ipfs://"))) return json({ error: "Token image must use HTTPS or IPFS." }, 400);
   if (description.length > 500) return json({ error: "Description is too long." }, 400);
-  const row = { user_id: auth.user.id, chain_id: 8453, provider: "clanker", provider_version: "v5", status: "awaiting_wallet", token_name: name, token_symbol: symbol, token_image_url: image || null, description: description || null, creator_wallet: wallet };
+  const row = { user_id: auth.user.id, chain_id: 8453, network: "Base Mainnet", provider: "clanker", provider_version: "v5", status: "awaiting_wallet", token_name: name, token_symbol: symbol, token_image_url: image || null, description: description || null, creator_wallet: wallet };
   const response = await dbRequest(env, "token_launches", { method: "POST", headers: { prefer: "return=representation" }, body: JSON.stringify(row) });
   const result = await response.json().catch(() => null);
   if (!response.ok || !Array.isArray(result) || !result[0]) return json({ error: "Could not create launch record." }, 502);
@@ -52,7 +70,7 @@ export async function onRequestPatch({ request, env }) {
   let body; try { body = await request.json(); } catch { return json({ error: "Invalid JSON body." }, 400); }
   const id = String(body.id || ""); const status = String(body.status || "");
   if (!/^[0-9a-f-]{36}$/i.test(id) || !["submitted", "pending_indexing", "confirmed", "failed"].includes(status)) return json({ error: "Invalid launch update." }, 400);
-  const lookup = await dbRequest(env, "token_launches?id=eq." + encodeURIComponent(id) + "&user_id=eq." + encodeURIComponent(auth.user.id) + "&select=status,creator_wallet,expected_token_address,transaction_hash", { method: "GET" });
+  const lookup = await dbRequest(env, "token_launches?id=eq." + encodeURIComponent(id) + "&user_id=eq." + encodeURIComponent(auth.user.id) + "&select=status,creator_wallet,expected_token_address,token_address,transaction_hash", { method: "GET" });
   const existingRows = await lookup.json().catch(() => null);
   if (!lookup.ok || !Array.isArray(existingRows) || !existingRows[0]) return json({ error: "Launch record not found." }, 404);
   const existing = existingRows[0];
@@ -104,6 +122,7 @@ export async function onRequestPatch({ request, env }) {
     }
     patch.transaction_hash = txHash;
     patch.expected_token_address = tokenAddress;
+    patch.token_address = tokenAddress;
     patch.confirmed_at = new Date().toISOString();
   }
   const response = await dbRequest(env, "token_launches?id=eq." + encodeURIComponent(id) + "&user_id=eq." + encodeURIComponent(auth.user.id), { method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify(patch) });

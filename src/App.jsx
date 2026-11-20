@@ -28,6 +28,9 @@ function App() {
   const [drafts, setDrafts] = useState(() => { try { return JSON.parse(localStorage.getItem('vicexa-project-drafts') || '[]') } catch { return [] } })
   const [form, setForm] = useState({ name: '', ticker: '', description: '', website: '' })
   const [notice, setNotice] = useState('')
+  const [deployedTokens, setDeployedTokens] = useState([])
+  const [directoryLoading, setDirectoryLoading] = useState(false)
+  const [directoryError, setDirectoryError] = useState('')
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
@@ -39,6 +42,23 @@ function App() {
   useEffect(() => {
     localStorage.setItem('vicexa-project-drafts', JSON.stringify(drafts))
   }, [drafts])
+
+  useEffect(() => {
+    if (active !== 'explore') return
+    let cancelled = false
+    setDirectoryLoading(true)
+    setDirectoryError('')
+    fetch('/api/launch-intents', { headers: { accept: 'application/json' } })
+      .then(async response => {
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(payload.error || 'Token directory is unavailable.')
+        return payload.tokens || []
+      })
+      .then(tokens => { if (!cancelled) setDeployedTokens(tokens) })
+      .catch(error => { if (!cancelled) setDirectoryError(error.message || 'Could not load deployed tokens.') })
+      .finally(() => { if (!cancelled) setDirectoryLoading(false) })
+    return () => { cancelled = true }
+  }, [active])
 
   useEffect(() => {
     if (!window.ethereum) return
@@ -53,7 +73,7 @@ function App() {
   async function connectWallet() {
     setWalletError('')
     if (!window.ethereum) {
-      setWalletError('No EVM wallet detected. Install MetaMask or Coinbase Wallet to continue.')
+      setWalletError('No EVM wallet detected. Open VICEXA in Bitget Wallet or another EIP-1193 compatible wallet.')
       return
     }
     setWalletBusy(true)
@@ -136,7 +156,15 @@ function App() {
             <div className="steps-grid"><div><span>01</span><b>Prepare</b><p>Enter your token name, symbol, supply, and decimals.</p></div><div><span>02</span><b>Review</b><p>Review the token configuration and deployment details.</p></div><div><span>03</span><b>Launch</b><p>Deploy through the Clanker V5 protocol after reviewing the wallet transaction.</p></div></div>
           </>}
 
-          {active === 'explore' && <section className="page-section"><div className="launch-eyebrow"><span/> BASE MAINNET TOKEN DIRECTORY</div><h1 className="page-title">EXPLORE<br/><span className="launch-gradient">TOKENS.</span></h1><p className="page-lead">Discover tokens created through the VICEXA Token Factory.</p>{drafts.length === 0 ? <div className="large-empty"><div className="empty-icon"><Search size={24}/></div><h2>No tokens listed yet</h2><p>The public token directory will populate after the factory contract and on-chain registry are connected.</p><button className="launch-primary" onClick={() => setActive('create')}>Create a token <Plus size={16}/></button></div> : <div className="draft-list">{drafts.map(draft => <article className="draft-card" key={draft.id}><div className="draft-token">{draft.ticker.slice(0,1)}</div><div className="draft-info"><b>{draft.name} <span>${draft.ticker}</span></b><p>{draft.description}</p><small>TOKEN DRAFT · NOT ON-CHAIN</small></div><span className="status-chip">DRAFT</span></article>)}</div>}</section>}
+          {active === 'explore' && <section className="page-section"><div className="launch-eyebrow"><span/> BASE MAINNET TOKEN DIRECTORY</div><h1 className="page-title">EXPLORE<br/><span className="launch-gradient">TOKENS.</span></h1><p className="page-lead">Discover verified Clanker V5 tokens launched through VICEXA.</p>
+            {directoryLoading && <div className="factory-tx-link">LOADING VERIFIED TOKEN DIRECTORY…</div>}
+            {directoryError && <div className="launch-alert"><span>{directoryError}</span><button onClick={() => setActive('overview')} aria-label="Dismiss"><X size={15}/></button></div>}
+            {deployedTokens.length === 0 && drafts.length === 0 && !directoryLoading ? <div className="large-empty"><div className="empty-icon"><Search size={24}/></div><h2>No tokens listed yet</h2><p>Successfully confirmed Base Mainnet deployments will appear here automatically.</p><button className="launch-primary" onClick={() => setActive('create')}>Create a token <Plus size={16}/></button></div> :
+              <div className="draft-list">
+                {deployedTokens.map(token => <article className="draft-card" key={token.id}><div className="draft-token">{(token.token_symbol || 'T').slice(0,1)}</div><div className="draft-info"><b>{token.token_name} <span>${token.token_symbol}</span></b><p>{token.description || 'Clanker V5 token on Base Mainnet.'}</p><small>LIVE · BASE MAINNET · CHAIN 8453</small><div className="factory-tx-link"><a href={'https://basescan.org/token/' + token.token_address} target="_blank" rel="noreferrer">Token contract <ExternalLink size={12}/></a> · <a href={'https://basescan.org/tx/' + token.transaction_hash} target="_blank" rel="noreferrer">Transaction <ExternalLink size={12}/></a></div></div><span className="status-chip">LIVE</span></article>)}
+                {drafts.map(draft => <article className="draft-card" key={draft.id}><div className="draft-token">{(draft.ticker || 'T').slice(0,1)}</div><div className="draft-info"><b>{draft.name} <span>${draft.ticker}</span></b><p>{draft.description}</p><small>TOKEN DRAFT · NOT ON-CHAIN</small></div><span className="status-chip">DRAFT</span></article>)}
+              </div>}
+          </section>}
 
           {active === 'create' && <TokenFactory account={account} onSaveDraft={saveTokenDraft} session={session}/>}
 

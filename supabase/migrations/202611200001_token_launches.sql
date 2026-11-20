@@ -46,3 +46,13 @@ create policy "Users can create their own launch drafts"
 
 -- No client-side UPDATE/DELETE policy: state transitions and provider responses
 -- must be written by a trusted server-side function using a restricted service role.
+
+-- Public directory fields for confirmed Base Mainnet deployments.
+alter table public.token_launches
+  add column if not exists token_address text,
+  add column if not exists network text not null default 'Base Mainnet';
+
+create unique index if not exists token_launches_chain_token_address_uidx
+  on public.token_launches (chain_id, lower(token_address))
+  where token_address is not null;
+

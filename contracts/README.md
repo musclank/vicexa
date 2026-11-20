@@ -11,18 +11,33 @@
 - Token symbol: 2–10 uppercase letters or digits.
 - Initial supply: whole-token amount, greater than zero.
 - Decimals: 0–18.
-- The token contract scales the whole-token amount by `10 ** decimals` and mints the result to the caller.
+- The token contract scales the whole-token amount by `10 ** decimals` and mints the result to the creator.
 
-## Compile
+## Compile and test
 
-The contracts use Solidity 0.8.24 or newer and OpenZeppelin Contracts ERC-20 (5.x).
+The contracts use Solidity 0.8.24 and OpenZeppelin Contracts 5.x.
 
-In Remix:
-1. Create or import both Solidity files while preserving the `contracts/` folder relationship.
-2. Install/resolve `@openzeppelin/contracts` through Remix's package import support.
-3. Select compiler 0.8.24 or a compatible newer 0.8.x compiler.
-4. Compile `VicexaTokenFactory.sol`.
+```bash
+npm install
+npm run test:contracts
+```
+
+In Remix, import both Solidity files while preserving their relative `contracts/` paths, resolve `@openzeppelin/contracts`, select compiler 0.8.24 or a compatible 0.8.x compiler, and compile `VicexaTokenFactory.sol`.
+
+## Deploy to Base Sepolia
+
+The repository includes a Hardhat configuration and a guarded deployment script. The script checks the connected chain ID and refuses to deploy unless it is Base Sepolia (84532).
+
+For a local deployment environment:
+
+1. Copy `.env.example` to `.env`.
+2. Set `DEPLOYER_PRIVATE_KEY` locally for a dedicated test wallet. Never commit this value or share it.
+3. Ensure the wallet has Base Sepolia test ETH.
+4. Run `npm run deploy:sepolia`.
+5. Save the factory address printed by the script and verify the deployment on [Base Sepolia BaseScan](https://sepolia.basescan.org/).
+
+After deployment, add `VITE_BASE_SEPOLIA_FACTORY_ADDRESS` to Cloudflare Pages and redeploy the site. This variable is a public contract address, not a secret.
 
 ## Deployment safety
 
-These source files are an initial implementation, not an audited release. Do not deploy to Base Mainnet yet. First compile and test on Base Sepolia, test boundary cases and token transfers, verify factory event data, review deployment bytecode and gas costs, and obtain an independent smart-contract security review. The web interface intentionally does not call this contract yet.
+These source files are an initial implementation, not an audited release. Do not deploy to Base Mainnet yet. First pass automated compilation and tests, test token creation and transfers on Base Sepolia, verify factory event data and supply scaling, review deployment bytecode and gas costs, and obtain an independent smart-contract security review.

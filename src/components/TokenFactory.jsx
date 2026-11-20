@@ -12,11 +12,23 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
     if (!name || name.length > 64) throw new Error('Token name must contain 1–64 characters.')
     if (!/^[A-Z0-9]{2,16}$/.test(symbol)) throw new Error('Symbol must contain 2–16 uppercase letters or numbers.')
     if (![buyFee, sellFee].every(v => Number.isInteger(v) && v >= 1 && v <= 10)) throw new Error('Buy and sell tax settings must each be between 1% and 10%. The live factory policy applies.')
-    for (const value of [form.image, form.website, form.x, form.telegram]) if (value && !(value.startsWith('https://') || value.startsWith('ipfs://'))) throw new Error('Image and social links must use HTTPS or IPFS URLs.')
+    const validateLink = (value, label, allowIpfs = false) => {
+      if (!value.trim()) return
+      let parsed
+      try { parsed = new URL(value.trim()) } catch { throw new Error(label + ' must be a valid URL.') }
+      const allowed = allowIpfs ? ['https:', 'ipfs:'] : ['https:']
+      if (!allowed.includes(parsed.protocol) || (parsed.protocol === 'https:' && !parsed.hostname.includes('.'))) {
+        throw new Error(label + ' must use a valid HTTPS URL' + (allowIpfs ? ' or IPFS URL.' : '.'))
+      }
+    }
+    validateLink(form.image, 'Token image', true)
+    validateLink(form.website, 'Website')
+    validateLink(form.x, 'X profile')
+    validateLink(form.telegram, 'Telegram')
     if (form.description.length > 500) throw new Error('Description must be 500 characters or fewer.')
     return { name, symbol, buyFee, sellFee }
   }
-  function saveDraft(event) { event.preventDefault(); try { const v = validate(); onSaveDraft({ name: v.name, ticker: v.symbol, description: form.description.trim(), website: form.website.trim(), type: 'clanker-v5', status: 'draft' }); setSaved(true); setError('') } catch (e) { setError(e.message) } }
+  function saveDraft(event) { event.preventDefault(); try { const v = validate(); onSaveDraft({ name: v.name, ticker: v.symbol, image: form.image.trim(), description: form.description.trim(), website: form.website.trim(), x: form.x.trim(), telegram: form.telegram.trim(), buyFee: v.buyFee, sellFee: v.sellFee, type: 'clanker-v5', status: 'draft' }); setSaved(true); setError('') } catch (e) { setError(e.message) } }
   async function updateServerRecord(id, payload) { const response = await fetch('/api/launch-intents', { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ id, ...payload }) }); if (!response.ok) throw new Error('The on-chain action finished, but VICEXA could not update its launch record. Check the transaction before retrying.') }
   async function retryVerification() {
     if (!launchRecordId || !txHash || !expectedTokenAddress || !session?.access_token) return
@@ -36,7 +48,24 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
     let v; try { v = validate() } catch (e) { setError(e.message); return }
     setTxBusy(true); let launchId = ''; let sentTxHash = ''
     try {
-      const chainId = await window.ethereum.request({ method: 'eth_chainId' }); if (chainId !== '0x2105') throw new Error('Switch your wallet to Base Mainnet before launching.')
+      const [chainId, walletAccounts] = await Promise.all([
+        window.ethereum.request({ method: 'eth_chainId' }),
+        window.ethereum.request({ method: 'eth_accounts' }),
+      ])
+      if (chainId !== '0x2105') throw new Error('Switch your wallet to Base Mainnet before launching.')
+      const activeWallet = walletAccounts?.[0] ? getAddress(walletAccounts[0]) : ''
+      if (!activeWallet || activeWallet.toLowerCase() !== getAddress(account).toLowerCase()) {
+        throw new Error('The active wallet account changed. Reconnect your wallet and try again.')
+      }
+      const approved = window.confirm(
+        'Review your token launch on Base Mainnet.\n\n' +
+        'Name: ' + v.name + '\n' +
+        'Symbol: ' + v.symbol + '\n' +
+        'Buy tax: ' + v.buyFee + '% · Sell tax: ' + v.sellFee + '%\n' +
+        'Wallet: ' + activeWallet + '\n\n' +
+        'This submits a real Clanker V5 deployment transaction and uses ETH for gas. Continue to the wallet for final review?'
+      )
+      if (!approved) { setTxBusy(false); return }
       const intentResponse = await fetch('/api/launch-intents', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ name: v.name, symbol: v.symbol, image: form.image.trim(), description: form.description.trim(), creatorWallet: getAddress(account) }) })
       const intent = await intentResponse.json(); if (!intentResponse.ok) throw new Error(intent.error || 'Could not prepare the launch record.')
       launchId = intent.launch.id; setLaunchRecordId(launchId); setLaunchStatus('AWAITING WALLET APPROVAL')
@@ -71,7 +100,7 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
       <label>TELEGRAM <span className="optional">OPTIONAL</span><input type="url" placeholder="https://t.me/yourproject" value={form.telegram} onChange={e => update('telegram', e.target.value)}/></label>
       <div className="factory-field-grid"><label>BUY TAX<select value={form.buyFee} onChange={e => update('buyFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label><label>SELL TAX<select value={form.sellFee} onChange={e => update('sellFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label></div>
       {error && <div className="factory-error" role="alert"><CircleAlert size={15}/>{error}</div>}{txHash && expectedTokenAddress && launchRecordId && launchStatus !== 'CONFIRMED' && <button className="launch-primary submit-draft" type="button" onClick={retryVerification} disabled={txBusy}> {txBusy ? 'VERIFYING…' : 'Retry transaction verification'} </button>}{saved && <div className="factory-saved" role="status"><Check size={15}/> Token configuration saved as a local draft.</div>}{launchStatus && <div className="factory-tx-link">LAUNCH STATUS: {launchStatus}</div>}
-      {tokenAddress && <div className="factory-saved" role="status"><Check size={15}/> Token confirmed: <a href={tokenUrl} target="_blank" rel="noreferrer">{tokenAddress.slice(0,8)}…{tokenAddress.slice(-6)} <ExternalLink size={12}/></a> · <a href={'https://www.clanker.world/clanker/' + tokenAddress} target="_blank" rel="noreferrer">Clanker <ExternalLink size={12}/></a></div>}{txUrl && <div className="factory-tx-link">Transaction: <a href={txUrl} target="_blank" rel="noreferrer">{txHash.slice(0,10)}…{txHash.slice(-6)} <ExternalLink size={12}/></a></div>}
+      {tokenAddress && <div className="factory-saved launch-success-panel" role="status"><Check size={15}/> Token successfully confirmed on Base: <a href={tokenUrl} target="_blank" rel="noreferrer">{tokenAddress.slice(0,8)}…{tokenAddress.slice(-6)} <ExternalLink size={12}/></a> · <a href={'https://www.clanker.world/clanker/' + tokenAddress} target="_blank" rel="noreferrer">Clanker <ExternalLink size={12}/></a></div>}{txUrl && <div className="factory-tx-link">Transaction: <a href={txUrl} target="_blank" rel="noreferrer">{txHash.slice(0,10)}…{txHash.slice(-6)} <ExternalLink size={12}/></a></div>}
       <button className="launch-primary submit-draft" type="submit">Save token draft <ArrowRight size={16}/></button><button className="launch-primary submit-draft factory-deploy-button" type="button" onClick={createToken} disabled={txBusy || !account || !session}>{txBusy ? <><LoaderCircle size={16} className="factory-spinner"/> LAUNCHING…</> : <>Launch on Base Mainnet <ArrowRight size={16}/></>}</button>
       <p className="form-disclaimer">Mainnet launch uses real ETH for gas. Review the token configuration and every wallet prompt before approving. Clanker V5 has a fixed protocol-controlled supply and live factory policies.</p>
     </form><aside className="factory-side"><div className="token-preview"><div className="token-preview-top"><span>LIVE PREVIEW</span><Coins size={17}/></div><div className="token-coin">{symbol.slice(0,1) || 'V'}</div><h2>{form.name.trim() || 'Your Token'}</h2><div className="token-symbol">{symbol ? '$' + symbol : '$SYMBOL'}</div><div className="token-supply"><span>BUY / SELL TAX</span><b>{form.buyFee}% / {form.sellFee}%</b></div><div className="token-supply"><span>NETWORK</span><b>BASE · 8453</b></div><div className="token-network"><i/> CLANKER V5 · MAINNET</div></div>

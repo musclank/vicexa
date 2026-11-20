@@ -27,7 +27,7 @@ export default function TokenFactory({ account, onSaveDraft }) {
   const [tokenAddress, setTokenAddress] = useState('')
 
   const formattedSupply = useMemo(() => {
-    if (!/^\\d+$/.test(form.supply)) return '—'
+    if (!/^\d+$/.test(form.supply)) return '—'
     try { return new Intl.NumberFormat('en-US').format(BigInt(form.supply)) } catch { return '—' }
   }, [form.supply])
 
@@ -47,7 +47,7 @@ export default function TokenFactory({ account, onSaveDraft }) {
     if (!name || name.length > 48 || !symbol || !/^[A-Z0-9]{2,10}$/.test(symbol)) {
       throw new Error('Enter a token name (up to 48 characters) and a symbol containing 2–10 uppercase letters or numbers.')
     }
-    if (!/^\\d+$/.test(supplyText) || BigInt(supplyText) <= 0n) {
+    if (!/^\d+$/.test(supplyText) || BigInt(supplyText) <= 0n) {
       throw new Error('Enter a whole-number token supply greater than zero.')
     }
     const maxSupply = ((1n << 256n) - 1n) / (10n ** BigInt(decimals))
@@ -147,7 +147,7 @@ export default function TokenFactory({ account, onSaveDraft }) {
           </label>
           <div className="factory-field-grid">
             <label>TOTAL SUPPLY
-              <input required inputMode="numeric" type="text" placeholder="1000000000" value={form.supply} onChange={e => update('supply', e.target.value.replace(/\\D/g, ''))}/>
+              <input required inputMode="numeric" type="text" placeholder="1000000000" value={form.supply} onChange={e => update('supply', e.target.value.replace(/\D/g, ''))}/>
               <small>Whole-token amount before decimals are applied.</small>
             </label>
             <label>TOKEN DECIMALS

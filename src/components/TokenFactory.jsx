@@ -28,7 +28,7 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
     if (form.description.length > 500) throw new Error('Description must be 500 characters or fewer.')
     return { name, symbol, buyFee, sellFee }
   }
-  function saveDraft(event) { event.preventDefault(); try { const v = validate(); onSaveDraft({ name: v.name, ticker: v.symbol, description: form.description.trim(), website: form.website.trim(), type: 'clanker-v5', status: 'draft' }); setSaved(true); setError('') } catch (e) { setError(e.message) } }
+  function saveDraft(event) { event.preventDefault(); try { const v = validate(); onSaveDraft({ name: v.name, ticker: v.symbol, image: form.image.trim(), description: form.description.trim(), website: form.website.trim(), x: form.x.trim(), telegram: form.telegram.trim(), buyFee: v.buyFee, sellFee: v.sellFee, type: 'clanker-v5', status: 'draft' }); setSaved(true); setError('') } catch (e) { setError(e.message) } }
   async function updateServerRecord(id, payload) { const response = await fetch('/api/launch-intents', { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ id, ...payload }) }); if (!response.ok) throw new Error('The on-chain action finished, but VICEXA could not update its launch record. Check the transaction before retrying.') }
   async function retryVerification() {
     if (!launchRecordId || !txHash || !expectedTokenAddress || !session?.access_token) return

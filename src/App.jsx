@@ -196,7 +196,16 @@ function App() {
             </section>
             <div className="content-heading"><div><div className="launch-eyebrow">TRENDING ON BASE</div><h2>Recently confirmed</h2></div><button className="text-action" onClick={() => setActive('explore')}>Explore all <ArrowUpRight size={14}/></button></div>
             <div className="feature-token-grid">
-              {publishedTokens.length ? publishedTokens.slice(0, 3).map((token, index) => <article className="feature-token-card" key={token.id}><div className="feature-token-top"><span className="feature-rank">0{index + 1}</span><span className="status-chip">CONFIRMED</span></div><div className="feature-token-symbol">{(token.token_symbol || 'T').slice(0, 1)}</div><b>{token.token_name}</b><span className="feature-ticker">{'
+              {publishedTokens.length ? publishedTokens.slice(0, 3).map((token, index) => (
+                <article className="feature-token-card" key={token.id}>
+                  <div className="feature-token-top"><span className="feature-rank">0{index + 1}</span><span className="status-chip">CONFIRMED</span></div>
+                  <div className="feature-token-symbol">{(token.token_symbol || 'T').slice(0, 1)}</div>
+                  <b>{token.token_name}</b><span className="feature-ticker">{token.token_symbol ? ' $' + token.token_symbol : ''}</span>
+                  <p>{token.description || 'Confirmed Clanker V5 launch on Base Mainnet.'}</p>
+                  <a href={'https://basescan.org/token/' + token.expected_token_address} target="_blank" rel="noreferrer">View on BaseScan <ArrowUpRight size={13}/></a>
+                </article>
+              )) : <div className="feature-empty"><TrendingUp size={19}/><div><b>Waiting for the first confirmed launch</b><p>Newly confirmed tokens will appear here automatically. No sample tokens or invented rankings.</p></div></div>}
+            </div>
             <div className="content-heading"><div><div className="launch-eyebrow">DISCOVER</div><h2>Explore tokens</h2></div><button className="text-action" onClick={() => setActive('explore')}>View all <ArrowUpRight size={14}/></button></div>
             <div className="empty-launch-card"><div className="empty-icon"><Rocket size={22}/></div><div><b>{publishedTokens.length ? 'Latest confirmed launches' : 'No confirmed tokens yet'}</b><p>{publishedTokens.length ? 'Explore verified Clanker V5 deployments currently listed on Base Mainnet.' : 'The Base Mainnet token directory is online. Successfully confirmed Clanker V5 launches will appear here automatically.'}</p></div><span className="status-chip">DIRECTORY ONLINE</span></div>
             <div className="content-heading"><div><div className="launch-eyebrow">HOW IT WORKS</div><h2>From configuration to token</h2></div></div>

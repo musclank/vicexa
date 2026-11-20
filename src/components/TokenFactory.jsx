@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createPublicClient, createWalletClient, custom, http, getAddress } from 'viem'
 import { base } from 'viem/chains'
-import { Clanker } from 'clanker-sdk/v5'
+import { Clanker, SEND_UNCERTAIN } from 'clanker-sdk/v5'
 import { ArrowRight, Check, CircleAlert, Coins, ExternalLink, ShieldCheck, Wallet, LoaderCircle } from 'lucide-react'
 const initialForm = { name: '', symbol: '', image: '', description: '', website: '', x: '', telegram: '', buyFee: '1', sellFee: '1' }
 export default function TokenFactory({ account, onSaveDraft, session }) {
@@ -37,12 +37,13 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
       if (deployment.error) throw deployment.error
       sentTxHash = deployment.txHash; setTxHash(sentTxHash); setLaunchStatus('TRANSACTION SUBMITTED'); await updateServerRecord(launchId, { status: 'submitted', txHash: sentTxHash, expectedAddress: deployment.expectedAddress })
       const receipt = await deployment.waitForTransaction()
-      if (receipt.error) { await updateServerRecord(launchId, { status: 'failed', txHash: sentTxHash, message: receipt.error.message }); throw receipt.error }
+      if (receipt.error) { setLaunchStatus('CONFIRMATION PENDING'); throw receipt.error }
       setTokenAddress(receipt.address); setLaunchStatus('CONFIRMED'); await updateServerRecord(launchId, { status: 'confirmed', txHash: sentTxHash, expectedAddress: deployment.expectedAddress, tokenAddress: receipt.address })
     } catch (e) {
       const message = e?.shortMessage || e?.message || 'Clanker V5 deployment failed.'
-      if (launchId && !sentTxHash && e?.data?.rawName !== 'SEND_UNCERTAIN') { try { await updateServerRecord(launchId, { status: 'failed', message }) } catch {} }
-      if (e?.data?.rawName === 'SEND_UNCERTAIN') { setLaunchStatus('TRANSACTION STATUS UNKNOWN'); setError('The wallet or RPC response was interrupted during submission. Do not retry yet. Check your wallet activity and BaseScan first.') } else setError(message)
+      if (launchId && !sentTxHash && e?.data?.rawName === SEND_UNCERTAIN) { try { await updateServerRecord(launchId, { status: 'pending_indexing' }) } catch {} }
+      else if (launchId && !sentTxHash) { try { await updateServerRecord(launchId, { status: 'failed', message }) } catch {} }
+      if (e?.data?.rawName === SEND_UNCERTAIN) { setLaunchStatus('TRANSACTION STATUS UNKNOWN'); setError('The wallet or RPC response was interrupted during submission. Do not retry yet. Check your wallet activity and BaseScan first.') } else if (sentTxHash && launchStatus !== 'CONFIRMED') { setLaunchStatus('CONFIRMATION PENDING'); setError('The transaction was submitted, but VICEXA could not yet verify the launch receipt. Do not launch again. Check BaseScan and retry confirmation later.') } else setError(message)
     } finally { setTxBusy(false) }
   }
   const symbol = form.symbol.trim().toUpperCase(); const txUrl = txHash ? 'https://basescan.org/tx/' + txHash : ''; const tokenUrl = tokenAddress ? 'https://basescan.org/token/' + tokenAddress : ''

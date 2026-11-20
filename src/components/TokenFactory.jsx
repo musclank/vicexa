@@ -78,7 +78,13 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
       sentTxHash = deployment.txHash; setTxHash(sentTxHash); setExpectedTokenAddress(deployment.expectedAddress); setLaunchStatus('TRANSACTION SUBMITTED'); await updateServerRecord(launchId, { status: 'submitted', txHash: sentTxHash, expectedAddress: deployment.expectedAddress })
       const receipt = await deployment.waitForTransaction()
       if (receipt.error) { setLaunchStatus('CONFIRMATION PENDING'); throw receipt.error }
-      setTokenAddress(receipt.address); setLaunchStatus('CONFIRMED'); await updateServerRecord(launchId, { status: 'confirmed', txHash: sentTxHash, expectedAddress: deployment.expectedAddress, tokenAddress: receipt.address })
+      const confirmedAddress = receipt.address || deployment.expectedAddress
+      if (!confirmedAddress || confirmedAddress.toLowerCase() !== String(deployment.expectedAddress || '').toLowerCase()) {
+        setLaunchStatus('CONFIRMATION PENDING')
+        throw new Error('The confirmed receipt did not match the expected token address. Keep this launch pending and verify it on BaseScan.')
+      }
+      await updateServerRecord(launchId, { status: 'confirmed', txHash: sentTxHash, expectedAddress: deployment.expectedAddress, tokenAddress: confirmedAddress })
+      setTokenAddress(confirmedAddress); setLaunchStatus('CONFIRMED')
     } catch (e) {
       const message = e?.shortMessage || e?.message || 'Clanker V5 deployment failed.'
       if (launchId && !sentTxHash && e?.data?.rawName === SEND_UNCERTAIN) { try { await updateServerRecord(launchId, { status: 'pending_indexing' }) } catch {} }

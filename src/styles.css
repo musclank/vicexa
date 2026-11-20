@@ -35,3 +35,15 @@
 .account-switch{font-size:12px;color:var(--muted);text-align:center;margin:24px 0}.account-switch button{background:none;border:0;color:var(--cyan);font:inherit;cursor:pointer}
 .account-secure{display:block;text-align:center;color:#73758a;font:9px 'DM Mono';letter-spacing:.12em}
 @media(max-width:650px){.account-panel{padding:28px 22px}.account-back{top:18px;left:18px}}
+
+
+/* Account entry points and Google authentication */
+.auth-top-button{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border:1px solid #59efff70;background:#59efff0b;color:#bdf9ff;font:10px 'DM Mono';letter-spacing:.08em;white-space:nowrap}
+.auth-top-button:hover{background:#59efff18;border-color:var(--cyan)}
+.google-auth-button{width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:12px;padding:11px 14px;border:1px solid #ffffff35;background:#f7f8fb;color:#171923;font:600 11px 'DM Mono';letter-spacing:.06em;cursor:pointer;transition:.2s}
+.google-auth-button:hover{background:#fff;border-color:#fff;transform:translateY(-1px)}
+.google-auth-button:disabled{opacity:.6;cursor:wait;transform:none}
+.google-auth-button svg{width:18px;height:18px;flex:0 0 18px}
+.account-divider{display:flex;align-items:center;gap:12px;margin:21px 0;color:#777c91;font:8px 'DM Mono';letter-spacing:.12em;white-space:nowrap}
+.account-divider:before,.account-divider:after{content:'';height:1px;flex:1;background:#ffffff20}
+@media(max-width:680px){.auth-top-button{min-height:34px;padding:0 10px;font-size:9px}.top-actions{gap:7px}}

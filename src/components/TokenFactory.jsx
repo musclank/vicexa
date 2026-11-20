@@ -5,7 +5,7 @@ import { Clanker, SEND_UNCERTAIN } from 'clanker-sdk/v5'
 import { ArrowRight, Check, CircleAlert, Coins, ExternalLink, ShieldCheck, Wallet, LoaderCircle } from 'lucide-react'
 const initialForm = { name: '', symbol: '', image: '', description: '', website: '', x: '', telegram: '', buyFee: '1', sellFee: '1' }
 export default function TokenFactory({ account, onSaveDraft, session }) {
-  const [form, setForm] = useState(initialForm); const [saved, setSaved] = useState(false); const [error, setError] = useState(''); const [txBusy, setTxBusy] = useState(false); const [txHash, setTxHash] = useState(''); const [tokenAddress, setTokenAddress] = useState(''); const [launchStatus, setLaunchStatus] = useState('')
+  const [form, setForm] = useState(initialForm); const [saved, setSaved] = useState(false); const [error, setError] = useState(''); const [txBusy, setTxBusy] = useState(false); const [txHash, setTxHash] = useState(''); const [tokenAddress, setTokenAddress] = useState(''); const [launchStatus, setLaunchStatus] = useState(''); const [launchRecordId, setLaunchRecordId] = useState(''); const [expectedTokenAddress, setExpectedTokenAddress] = useState('')
   const update = (key, value) => { setSaved(false); setError(''); setForm(current => ({ ...current, [key]: value })) }
   const validate = () => {
     const name = form.name.trim(); const symbol = form.symbol.trim().toUpperCase(); const buyFee = Number(form.buyFee); const sellFee = Number(form.sellFee)
@@ -18,8 +18,19 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
   }
   function saveDraft(event) { event.preventDefault(); try { const v = validate(); onSaveDraft({ name: v.name, ticker: v.symbol, description: form.description.trim(), website: form.website.trim(), type: 'clanker-v5', status: 'draft' }); setSaved(true); setError('') } catch (e) { setError(e.message) } }
   async function updateServerRecord(id, payload) { const response = await fetch('/api/launch-intents', { method: 'PATCH', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ id, ...payload }) }); if (!response.ok) throw new Error('The on-chain action finished, but VICEXA could not update its launch record. Check the transaction before retrying.') }
+  async function retryVerification() {
+    if (!launchRecordId || !txHash || !expectedTokenAddress || !session?.access_token) return
+    setTxBusy(true); setError(''); setLaunchStatus('RETRYING VERIFICATION')
+    try {
+      await updateServerRecord(launchRecordId, { status: 'confirmed', txHash, expectedAddress: expectedTokenAddress, tokenAddress: expectedTokenAddress })
+      setTokenAddress(expectedTokenAddress); setLaunchStatus('CONFIRMED')
+    } catch (e) {
+      setLaunchStatus('CONFIRMATION PENDING')
+      setError(e.message || 'Verification is still pending. Do not submit another launch.')
+    } finally { setTxBusy(false) }
+  }
   async function createToken() {
-    setError(''); setTxHash(''); setTokenAddress(''); setLaunchStatus('')
+    setError(''); setTxHash(''); setTokenAddress(''); setLaunchStatus(''); setLaunchRecordId(''); setExpectedTokenAddress('')
     if (!session?.access_token) { setError('Sign in to VICEXA before launching a token.'); return }
     if (!account || !window.ethereum) { setError('Connect an EVM wallet before launching.'); return }
     let v; try { v = validate() } catch (e) { setError(e.message); return }
@@ -28,14 +39,14 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
       const chainId = await window.ethereum.request({ method: 'eth_chainId' }); if (chainId !== '0x2105') throw new Error('Switch your wallet to Base Mainnet before launching.')
       const intentResponse = await fetch('/api/launch-intents', { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token }, body: JSON.stringify({ name: v.name, symbol: v.symbol, image: form.image.trim(), description: form.description.trim(), creatorWallet: getAddress(account) }) })
       const intent = await intentResponse.json(); if (!intentResponse.ok) throw new Error(intent.error || 'Could not prepare the launch record.')
-      launchId = intent.launch.id; setLaunchStatus('AWAITING WALLET APPROVAL')
+      launchId = intent.launch.id; setLaunchRecordId(launchId); setLaunchStatus('AWAITING WALLET APPROVAL')
       const wallet = createWalletClient({ account: getAddress(account), chain: base, transport: custom(window.ethereum) })
       const publicClient = createPublicClient({ chain: base, transport: http(import.meta.env.VITE_BASE_RPC_URL || 'https://mainnet.base.org') })
       const clanker = new Clanker({ wallet, publicClient })
       const metadata = { description: form.description.trim(), socialMediaUrls: [ ...(form.website ? [{ platform: 'website', url: form.website.trim() }] : []), ...(form.x ? [{ platform: 'x', url: form.x.trim() }] : []), ...(form.telegram ? [{ platform: 'telegram', url: form.telegram.trim() }] : []) ] }
       const deployment = await clanker.deploy({ name: v.name, symbol: v.symbol, ...(form.image.trim() ? { image: form.image.trim() } : {}), metadata, buyFee: v.buyFee, sellFee: v.sellFee, context: { interface: 'VICEXA', platform: 'VICEXA Launchpad' } })
       if (deployment.error) throw deployment.error
-      sentTxHash = deployment.txHash; setTxHash(sentTxHash); setLaunchStatus('TRANSACTION SUBMITTED'); await updateServerRecord(launchId, { status: 'submitted', txHash: sentTxHash, expectedAddress: deployment.expectedAddress })
+      sentTxHash = deployment.txHash; setTxHash(sentTxHash); setExpectedTokenAddress(deployment.expectedAddress); setLaunchStatus('TRANSACTION SUBMITTED'); await updateServerRecord(launchId, { status: 'submitted', txHash: sentTxHash, expectedAddress: deployment.expectedAddress })
       const receipt = await deployment.waitForTransaction()
       if (receipt.error) { setLaunchStatus('CONFIRMATION PENDING'); throw receipt.error }
       setTokenAddress(receipt.address); setLaunchStatus('CONFIRMED'); await updateServerRecord(launchId, { status: 'confirmed', txHash: sentTxHash, expectedAddress: deployment.expectedAddress, tokenAddress: receipt.address })
@@ -59,7 +70,7 @@ export default function TokenFactory({ account, onSaveDraft, session }) {
       <label>X PROFILE <span className="optional">OPTIONAL</span><input type="url" placeholder="https://x.com/yourproject" value={form.x} onChange={e => update('x', e.target.value)}/></label>
       <label>TELEGRAM <span className="optional">OPTIONAL</span><input type="url" placeholder="https://t.me/yourproject" value={form.telegram} onChange={e => update('telegram', e.target.value)}/></label>
       <div className="factory-field-grid"><label>BUY TAX<select value={form.buyFee} onChange={e => update('buyFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label><label>SELL TAX<select value={form.sellFee} onChange={e => update('sellFee', e.target.value)}>{[1,2,3,4,5,6,7,8,9,10].map(v => <option key={v} value={v}>{v}%</option>)}</select></label></div>
-      {error && <div className="factory-error" role="alert"><CircleAlert size={15}/>{error}</div>}{saved && <div className="factory-saved" role="status"><Check size={15}/> Token configuration saved as a local draft.</div>}{launchStatus && <div className="factory-tx-link">LAUNCH STATUS: {launchStatus}</div>}
+      {error && <div className="factory-error" role="alert"><CircleAlert size={15}/>{error}</div>}{txHash && expectedTokenAddress && launchRecordId && launchStatus !== 'CONFIRMED' && <button className="launch-primary submit-draft" type="button" onClick={retryVerification} disabled={txBusy}> {txBusy ? 'VERIFYING…' : 'Retry transaction verification'} </button>}{saved && <div className="factory-saved" role="status"><Check size={15}/> Token configuration saved as a local draft.</div>}{launchStatus && <div className="factory-tx-link">LAUNCH STATUS: {launchStatus}</div>}
       {tokenAddress && <div className="factory-saved" role="status"><Check size={15}/> Token confirmed: <a href={tokenUrl} target="_blank" rel="noreferrer">{tokenAddress.slice(0,8)}…{tokenAddress.slice(-6)} <ExternalLink size={12}/></a> · <a href={'https://www.clanker.world/clanker/' + tokenAddress} target="_blank" rel="noreferrer">Clanker <ExternalLink size={12}/></a></div>}{txUrl && <div className="factory-tx-link">Transaction: <a href={txUrl} target="_blank" rel="noreferrer">{txHash.slice(0,10)}…{txHash.slice(-6)} <ExternalLink size={12}/></a></div>}
       <button className="launch-primary submit-draft" type="submit">Save token draft <ArrowRight size={16}/></button><button className="launch-primary submit-draft factory-deploy-button" type="button" onClick={createToken} disabled={txBusy || !account || !session}>{txBusy ? <><LoaderCircle size={16} className="factory-spinner"/> LAUNCHING…</> : <>Launch on Base Mainnet <ArrowRight size={16}/></>}</button>
       <p className="form-disclaimer">Mainnet launch uses real ETH for gas. Review the token configuration and every wallet prompt before approving. Clanker V5 has a fixed protocol-controlled supply and live factory policies.</p>

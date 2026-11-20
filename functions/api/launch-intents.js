@@ -70,6 +70,9 @@ export async function onRequestPatch({ request, env }) {
     if (!["awaiting_wallet", "submitted"].includes(existing.status)) return json({ error: "This launch can no longer be marked failed." }, 409);
     patch.failure_message = String(body.message || "Launch failed.").slice(0, 300);
   }
+  if (status === "pending_indexing" && !["awaiting_wallet", "submitted"].includes(existing.status)) {
+    return json({ error: "Only an unconfirmed launch can enter pending indexing." }, 409);
+  }
   if (status === "confirmed") {
     const txHash = String(body.txHash || "");
     const tokenAddress = String(body.tokenAddress || "");
